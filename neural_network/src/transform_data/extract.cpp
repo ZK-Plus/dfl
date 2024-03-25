@@ -4,6 +4,160 @@
 #include <Eigen/Dense>
 #include "functions.h"
 
+void printImages(int count)
+{
+    std::ifstream images_file("./data/iid/train-images-0.idx3-ubyte", std::ios::binary);
+    std::ifstream labels_file("./data/iid/train-labels-0.idx1-ubyte", std::ios::binary);
+    if (!images_file.is_open() || !labels_file.is_open())
+    {
+        std::cerr << "Error: Failed to open files" << std::endl;
+        return;
+    }
+
+    // Skip the headers
+    images_file.seekg(16);
+    labels_file.seekg(8);
+
+    char image[28 * 28];
+    unsigned char label; // Use unsigned char for the label to properly read values 0-255
+    for (int i = 0; i < count; i++)
+    {
+        if (!labels_file.read(reinterpret_cast<char *>(&label), sizeof(label)))
+        {
+            std::cerr << "Error reading label from file" << std::endl;
+            return;
+        }
+
+        // Print the label before the image
+        std::cout << "Label: " << static_cast<int>(label) << std::endl;
+
+        if (!images_file.read(reinterpret_cast<char *>(&image), sizeof(image)))
+        {
+            std::cerr << "Error reading image from file" << std::endl;
+            return;
+        }
+
+        for (int j = 0; j < 784; j++)
+        {
+            if (j != 0 && j % 28 == 0)
+            {
+                std::cout << '\n';
+            }
+            std::cout << (static_cast<unsigned char>(image[j]) < 128 ? " . " : "@@@");
+        }
+        std::cout << "\n\n"; // Extra newline for spacing between images
+    }
+
+    images_file.close();
+    labels_file.close();
+}
+
+void printLabels(int count)
+{
+    std::ifstream labels_file("./data/iid/train-labels-0.idx1-ubyte", std::ios::binary);
+    if (!labels_file.is_open())
+    {
+        std::cout << "Error: Failed to open file" << std::endl;
+        return;
+    }
+
+    // Skip headers
+    labels_file.seekg(8);
+
+    // Read and print labels
+    char label;
+    for (int i = 0; i < count; i++)
+    {
+        if (!labels_file.read(&label, 1))
+        {
+            std::cerr << "Error reading from file" << std::endl;
+            return;
+        }
+        std::cout << static_cast<int>(label) << std::endl;
+    }
+
+    labels_file.close();
+}
+
+void prepareIID(int number_of_partitions, int sample_size)
+{
+    std::ifstream images_file(TRAIN_IMAGES_FILE_PATH, std::ios::binary);
+    std::ifstream labels_file(TRAIN_LABELS_FILE_PATH, std::ios::binary);
+
+    if (!images_file.is_open() || !labels_file.is_open())
+    {
+        std::cout << "Error: Failed to open file" << std::endl;
+        return;
+    }
+
+    // Skip headers for the original files just once, since we will manage offsets manually
+    images_file.seekg(16, std::ios::beg);
+    labels_file.seekg(8, std::ios::beg);
+
+    for (int i = 0; i < number_of_partitions; i++)
+    {
+        const std::string NEW_TRAIN_IMAGES_FILE_PATH = "./data/iid/train-images-" + std::to_string(i) + ".idx3-ubyte";
+        const std::string NEW_TRAIN_LABELS_FILE_PATH = "./data/iid/train-labels-" + std::to_string(i) + ".idx1-ubyte";
+
+        std::ofstream new_images_file(NEW_TRAIN_IMAGES_FILE_PATH, std::ios::binary);
+        std::ofstream new_labels_file(NEW_TRAIN_LABELS_FILE_PATH, std::ios::binary);
+
+        if (!new_images_file.is_open() || !new_labels_file.is_open())
+        {
+            std::cout << "Error: Failed to open new file" << std::endl;
+            return;
+        }
+
+        // Prepare headers for the new files
+        int magicNumberImages = 2051;
+        int magicNumberLabels = 2049;
+        int numberOfImages = sample_size;
+        int numberOfRows = 28;
+        int numberOfColumns = 28;
+
+        // Convert to big endian
+        magicNumberImages = __builtin_bswap32(magicNumberImages);
+        magicNumberLabels = __builtin_bswap32(magicNumberLabels);
+        numberOfImages = __builtin_bswap32(numberOfImages);
+        numberOfRows = __builtin_bswap32(numberOfRows);
+        numberOfColumns = __builtin_bswap32(numberOfColumns);
+
+        // Write headers for the new files
+        new_images_file.write(reinterpret_cast<char *>(&magicNumberImages), sizeof(magicNumberImages));
+        new_images_file.write(reinterpret_cast<char *>(&numberOfImages), sizeof(numberOfImages));
+        new_images_file.write(reinterpret_cast<char *>(&numberOfRows), sizeof(numberOfRows));
+        new_images_file.write(reinterpret_cast<char *>(&numberOfColumns), sizeof(numberOfColumns));
+
+        new_labels_file.write(reinterpret_cast<char *>(&magicNumberLabels), sizeof(magicNumberLabels));
+        new_labels_file.write(reinterpret_cast<char *>(&numberOfImages), sizeof(numberOfImages));
+
+        // Read and write the data for each partition
+        char image[28 * 28];
+        char label;
+
+        for (int j = 0; j < sample_size; j++)
+        {
+            if (!images_file.read(reinterpret_cast<char *>(&image), sizeof(image)) ||
+                !labels_file.read(&label, sizeof(label)))
+            {
+                std::cerr << "Error reading from source files" << std::endl;
+                return;
+            }
+            new_images_file.write(reinterpret_cast<char *>(&image), sizeof(image));
+            new_labels_file.write(&label, sizeof(label));
+        }
+
+        // Closing the newly created files for this partition
+        new_images_file.close();
+        new_labels_file.close();
+    }
+
+    // Closing the original dataset files
+    images_file.close();
+    labels_file.close();
+}
+
+// non iid extraction
 void extractNumbers()
 {
     // open old file
@@ -11,8 +165,8 @@ void extractNumbers()
     std::ifstream labels_file(TRAIN_LABELS_FILE_PATH, std::ios::binary);
 
     // open new file
-    const std::string NEW_TRAIN_IMAGES_FILE_PATH = "./data/new_train-images.idx3-ubyte";
-    const std::string NEW_TRAIN_LABELS_FILE_PATH = "./data/new_train-labels.idx1-ubyte";
+    const std::string NEW_TRAIN_IMAGES_FILE_PATH = "./data/niid/new_train-images.idx3-ubyte";
+    const std::string NEW_TRAIN_LABELS_FILE_PATH = "./data/nidd/new_train-labels.idx1-ubyte";
 
     std::ofstream new_images_file(NEW_TRAIN_IMAGES_FILE_PATH, std::ios::binary);
     std::ofstream new_labels_file(NEW_TRAIN_LABELS_FILE_PATH, std::ios::binary);
@@ -105,12 +259,15 @@ void verifyNewLabelsFile(const std::string &labelsFilePath, int expectedZerosCou
 
 int main()
 {
-    // extractNumbers();
-    int expectedZerosCount = 5923; // Update the expected count as necessary
-    //  Path to the new labels file
-    const std::string NEW_TRAIN_LABELS_FILE_PATH = "./data/new_train-labels.idx1-ubyte";
-    // Call the verifyNewLabelsFile method with the path and expected number of zeros
-    verifyNewLabelsFile(NEW_TRAIN_LABELS_FILE_PATH, 5923, 0); // Update the expected count as necessary
+    // // extractNumbers();
+    // int expectedZerosCount = 5923; // Update the expected count as necessary
+    // //  Path to the new labels file
+    // const std::string NEW_TRAIN_LABELS_FILE_PATH = "./data/new_train-labels.idx1-ubyte";
+    // // Call the verifyNewLabelsFile method with the path and expected number of zeros
+    // verifyNewLabelsFile(NEW_TRAIN_LABELS_FILE_PATH, 5923, 0); // Update the expected count as necessary
+    prepareIID(5, 5000);
+    printLabels(100);
+    printImages(100);
 
     return 0;
 }
