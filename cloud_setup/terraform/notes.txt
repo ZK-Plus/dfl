@@ -1,0 +1,13 @@
+Practical Azure Cli commands:
+
+List all images in location:
+az vm image list --location germanywestcentral --output table --all
+
+List all sizes of vm in location:
+az vm list-sizes --location germanywestcentral --output table
+
+terraform output -raw private_key_data > /Users/johann/.ssh/private_key.pem
+
+terraform output -json > outputs.txt
+
+ssh -i /Users/johann/.ssh/azure azureadmin@4.185.41.194
