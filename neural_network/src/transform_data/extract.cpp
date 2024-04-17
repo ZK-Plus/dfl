@@ -1,13 +1,15 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <random>
 #include <Eigen/Dense>
 #include "functions.h"
+#include <algorithm>
 
 void printImages(int count)
 {
-    std::ifstream images_file("./data/iid/train-images-0.idx3-ubyte", std::ios::binary);
-    std::ifstream labels_file("./data/iid/train-labels-0.idx1-ubyte", std::ios::binary);
+    std::ifstream images_file("./data/niid/train-images0_7.idx3-ubyte", std::ios::binary);
+    std::ifstream labels_file("./data/niid/train-labels0_7.idx1-ubyte", std::ios::binary);
     if (!images_file.is_open() || !labels_file.is_open())
     {
         std::cerr << "Error: Failed to open files" << std::endl;
@@ -157,6 +159,115 @@ void prepareIID(int number_of_partitions, int sample_size)
     labels_file.close();
 }
 
+void prepareNIID(int sample_size, int first_number, int second_number)
+{
+    // open old file
+    std::ifstream images_file(TRAIN_IMAGES_FILE_PATH, std::ios::binary);
+    std::ifstream labels_file(TRAIN_LABELS_FILE_PATH, std::ios::binary);
+
+    if (!images_file.is_open() || !labels_file.is_open())
+    {
+        std::cout << "Error: Failed to open file" << std::endl;
+        return;
+    }
+
+    images_file.seekg(16, std::ios::beg);
+    labels_file.seekg(8, std::ios::beg);
+
+    std::vector<int> first_number_indices;
+    std::vector<int> second_number_indices;
+    std::vector<int> merged_indices;
+
+    // get indices of first and second number
+    char label;
+    int i = 0;
+    while (labels_file.read(reinterpret_cast<char *>(&label), 1))
+    { // Read until end of file
+        // std::cout << label << std::endl;
+        if (label == first_number)
+        {
+            first_number_indices.push_back(i);
+        }
+        else if (label == second_number)
+        {
+            second_number_indices.push_back(i);
+        }
+        ++i;
+    }
+
+    // shuffle indices randomly
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    std::shuffle(first_number_indices.begin(), first_number_indices.end(), g);
+    std::shuffle(second_number_indices.begin(), second_number_indices.end(), g);
+
+    // merge the two indices
+    for (int i = 0; i < sample_size; i++)
+    {
+        merged_indices.push_back(first_number_indices[i]);
+        merged_indices.push_back(second_number_indices[i]);
+    }
+
+    // write indices to new file according to sample size
+    const std::string NEW_LABELS_FILE_PATH = "./data/niid/train-labels" + std::to_string(first_number) + "_" + std::to_string(second_number) + ".idx1-ubyte";
+    const std::string NEW_IMAGES_FILE_PATH = "./data/niid/train-images" + std::to_string(first_number) + "_" + std::to_string(second_number) + ".idx3-ubyte";
+    std::ofstream new_labels_file(NEW_LABELS_FILE_PATH, std::ios::binary);
+    std::ofstream new_images_file(NEW_IMAGES_FILE_PATH, std::ios::binary);
+
+    if (!new_labels_file.is_open() || !new_images_file.is_open())
+    {
+        std::cout << "Error: Failed to open new files" << std::endl;
+        return;
+    }
+
+    int magicNumber = 2049; // Typical magic number for MNIST label files
+    int numberOfItems = sample_size;
+    magicNumber = __builtin_bswap32(magicNumber);     // Convert to big endian
+    numberOfItems = __builtin_bswap32(numberOfItems); // Convert to big endian
+    new_labels_file.write(reinterpret_cast<char *>(&magicNumber), sizeof(magicNumber));
+    new_labels_file.write(reinterpret_cast<char *>(&numberOfItems), sizeof(numberOfItems));
+
+    magicNumber = 2051;                           // Typical magic number for MNIST image files
+    magicNumber = __builtin_bswap32(magicNumber); // Convert to big endian
+    new_images_file.write(reinterpret_cast<char *>(&magicNumber), sizeof(magicNumber));
+    new_images_file.write(reinterpret_cast<char *>(&numberOfItems), sizeof(numberOfItems));
+    int numberOfRows = 28;
+    int numberOfColumns = 28;
+    numberOfRows = __builtin_bswap32(numberOfRows);       // Convert to big endian
+    numberOfColumns = __builtin_bswap32(numberOfColumns); // Convert to big endian
+    new_images_file.write(reinterpret_cast<char *>(&numberOfRows), sizeof(numberOfRows));
+    new_images_file.write(reinterpret_cast<char *>(&numberOfColumns), sizeof(numberOfColumns));
+
+    // Write the labels and images
+    char label_byte;
+    char image[28 * 28];
+    for (int i = 0; i < sample_size; i++)
+    {
+        // Write the label
+        if (i % 2 == 0)
+        {
+            label_byte = first_number;
+        }
+        else
+        {
+            label_byte = second_number;
+        }
+        new_labels_file.write(&label_byte, 1);
+
+        // Write the image
+        images_file.seekg(16 + merged_indices[i] * 28 * 28);
+        images_file.read(reinterpret_cast<char *>(&image), 28 * 28);
+        new_images_file.write(reinterpret_cast<char *>(&image), 28 * 28);
+    }
+
+    // Close files
+    images_file.close();
+    labels_file.close();
+    new_images_file.close();
+    new_labels_file.close();
+}
+
 // non iid extraction
 void extractNumbers()
 {
@@ -265,8 +376,9 @@ int main()
     // const std::string NEW_TRAIN_LABELS_FILE_PATH = "./data/new_train-labels.idx1-ubyte";
     // // Call the verifyNewLabelsFile method with the path and expected number of zeros
     // verifyNewLabelsFile(NEW_TRAIN_LABELS_FILE_PATH, 5923, 0); // Update the expected count as necessary
-    prepareIID(5, 5000);
-    printLabels(100);
+    // prepareIID(5, 5000);
+    // printImages(100);
+    prepareNIID(100, 0, 7);
     printImages(100);
 
     return 0;
