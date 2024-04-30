@@ -1,6 +1,6 @@
 ---
 - name: prepare
-  hosts: azure_vms
+  hosts: cloud_vms
   become: yes
   vars:
     ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
@@ -21,8 +21,30 @@
         state: present
         update_cache: yes
 
-    - name: Efficiently copy src folder to VMs
-      ansible.builtin.synchronize:
-        src: "../../node_code/"
-        dest: "./training/"
-        recursive: yes
+    - name: Install build-essential
+      ansible.builtin.apt:
+        name: build-essential
+        state: present
+        update_cache: yes
+
+    - name: Cloning the snpguest repo
+      ansible.builtin.git:
+        repo: https://github.com/virtee/snpguest.git
+        dest: "/home/johann/snpguest"
+
+    - name: Execute rustup installation script
+      ansible.builtin.shell:
+        cmd: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+      args:
+        creates: "{{ ansible_env.HOME }}/.cargo/bin/rustup"
+
+    - name: Execute cargo build command
+      ansible.builtin.shell:
+        cmd: "source $HOME/.cargo/env && cargo build -r"
+        chdir: "/home/johann/snpguest"
+        executable: /bin/bash
+    # - name: Efficiently copy src folder to VMs
+    #   ansible.builtin.synchronize:
+    #     src: "../../node_code/"
+    #     dest: "./training/"
+    #     recursive: yes

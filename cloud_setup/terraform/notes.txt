@@ -10,8 +10,8 @@ terraform output -raw private_key_data > /Users/johann/.ssh/private_key.pem
 
 terraform output -json > outputs.txt
 
-ssh -i /Users/johann/.ssh/azure azureadmin@4.185.41.194
+ssh -i /Users/johann/.ssh/gcloud admin@4.185.41.194
 
-Gloud commands:
+Gcloud commands:
 
 
