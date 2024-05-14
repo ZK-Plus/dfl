@@ -8,8 +8,8 @@
 
 void printImages(int count)
 {
-    std::ifstream images_file("./data/niid/train-images0_7.idx3-ubyte", std::ios::binary);
-    std::ifstream labels_file("./data/niid/train-labels0_7.idx1-ubyte", std::ios::binary);
+    std::ifstream images_file("./data/iid/train-images-0.idx3-ubyte", std::ios::binary);
+    std::ifstream labels_file("./data/iid/train-labels-0.idx1-ubyte", std::ios::binary);
     if (!images_file.is_open() || !labels_file.is_open())
     {
         std::cerr << "Error: Failed to open files" << std::endl;
@@ -83,12 +83,12 @@ void printLabels(int count)
 
 void prepareIID(int number_of_partitions, int sample_size)
 {
-    std::ifstream images_file(TRAIN_IMAGES_FILE_PATH, std::ios::binary);
-    std::ifstream labels_file(TRAIN_LABELS_FILE_PATH, std::ios::binary);
+    std::ifstream images_file("./data/train-images.idx3-ubyte", std::ios::binary);
+    std::ifstream labels_file("./data/train-labels.idx1-ubyte", std::ios::binary);
 
     if (!images_file.is_open() || !labels_file.is_open())
     {
-        std::cout << "Error: Failed to open file" << std::endl;
+        std::cout << "Error: Failed to open original image and label file" << std::endl;
         return;
     }
 
@@ -376,10 +376,10 @@ int main()
     // const std::string NEW_TRAIN_LABELS_FILE_PATH = "./data/new_train-labels.idx1-ubyte";
     // // Call the verifyNewLabelsFile method with the path and expected number of zeros
     // verifyNewLabelsFile(NEW_TRAIN_LABELS_FILE_PATH, 5923, 0); // Update the expected count as necessary
-    // prepareIID(5, 5000);
-    // printImages(100);
-    prepareNIID(100, 0, 7);
+    prepareIID(4, 10000);
     printImages(100);
+    //  prepareNIID(100, 0, 7);
+    //  printImages(100);
 
     return 0;
 }

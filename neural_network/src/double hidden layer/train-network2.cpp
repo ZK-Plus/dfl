@@ -13,16 +13,16 @@ using Eigen::MatrixXd;
 // Initialize weights and biases to a random value between -0.5 and 0.5
 weights_and_biases wab;
 
-void save_weights_and_biases()
+void save_weights_and_biases(const string &file_path)
 {
     cout << "Saving weights and biases to file...\n";
     streamoff write_position = 0;
-    write_position = save(wab.W1, write_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    write_position = save(wab.B1, write_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    write_position = save(wab.W2, write_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    write_position = save(wab.B2, write_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    write_position = save(wab.W3, write_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    save(wab.B3, write_position, WEIGHTS_AND_BIASES_FILE_PATH);
+    write_position = save(wab.W1, write_position, file_path);
+    write_position = save(wab.B1, write_position, file_path);
+    write_position = save(wab.W2, write_position, file_path);
+    write_position = save(wab.B2, write_position, file_path);
+    write_position = save(wab.W3, write_position, file_path);
+    save(wab.B3, write_position, file_path);
 
     // cout << "Biases of the second layer (B2):\n"
     //      << wab.B2 << "\n\n";
@@ -50,22 +50,22 @@ void save_weight_and_biases_as_csv()
     file.close();
 }
 
-void read_weights_and_biases()
+void read_weights_and_biases(const string &path)
 {
     cout << "Reading weights and biases from file...\n";
 
     // check if the file exists
-    ifstream file(WEIGHTS_AND_BIASES_FILE_PATH);
+    ifstream file(path);
     if (file.good())
     {
         file.close();
         streamoff read_position = 0;
-        read_position = read(&wab.W1, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-        read_position = read(&wab.B1, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-        read_position = read(&wab.W2, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-        read_position = read(&wab.B2, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-        read_position = read(&wab.W3, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-        read(&wab.B3, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
+        read_position = read(&wab.W1, read_position, path);
+        read_position = read(&wab.B1, read_position, path);
+        read_position = read(&wab.W2, read_position, path);
+        read_position = read(&wab.B2, read_position, path);
+        read_position = read(&wab.W3, read_position, path);
+        read(&wab.B3, read_position, path);
     }
 }
 
@@ -75,13 +75,13 @@ void signal_callback_handler(int signum)
     // Optionally save weights and biases to file
     if (SAVE_WEIGHTS_AND_BIASES)
     {
-        save_weights_and_biases();
+        save_weights_and_biases("./data/backup.bin");
     }
 
     exit(signum);
 }
 
-int train_network()
+int train_network(const string &wb_in, const string &wb_out, const string &image_path, const string &label_path)
 {
     // Register signal handler
     signal(SIGINT, signal_callback_handler);
@@ -100,7 +100,7 @@ int train_network()
     // Initialize weights and biases by reading from file
     if (SAVE_WEIGHTS_AND_BIASES)
     {
-        read_weights_and_biases();
+        read_weights_and_biases(wb_in);
     }
 
     // For each epoch, perform gradient descent and update weights and biases
@@ -110,7 +110,7 @@ int train_network()
         auto start = chrono::high_resolution_clock::now();
 
         // Store number of correct predictions
-        int count = gradient_descent(wab, LEARNING_RATE, epoch);
+        int count = gradient_descent(wab, LEARNING_RATE, epoch, image_path, label_path);
 
         // Get end time
         auto end = chrono::high_resolution_clock::now();
@@ -126,12 +126,12 @@ int train_network()
         seconds %= 60;
 
         // Print the results of the epoch
-        cout << "Epoch: " << epoch << "/" << NUM_EPOCHS << "\n";
-        cout << "Accuracy: " << count << "/" << NUM_TRAIN_IMAGES << "\n";
-        cout << "Time taken: " << duration << " seconds \n";
-        cout << "Estimated time remaining: ";
-        printf("%02d:%02d:%02d\n", hours, minutes, seconds);
-        cout << "\n";
+        // cout << "Epoch: " << epoch << "/" << NUM_EPOCHS << "\n";
+        // cout << "Accuracy: " << count << "/" << NUM_TRAIN_IMAGES << "\n";
+        // cout << "Time taken: " << duration << " seconds \n";
+        // cout << "Estimated time remaining: ";
+        // printf("%02d:%02d:%02d\n", hours, minutes, seconds);
+        // cout << "\n";
     }
 
     cout << "Finished training!\n";
@@ -139,8 +139,9 @@ int train_network()
     // Optionally save weights and biases to file
     if (SAVE_WEIGHTS_AND_BIASES)
     {
-        save_weights_and_biases();
-        save_weight_and_biases_as_csv();
+        // TODO: adapt to dynamic param
+        save_weights_and_biases(wb_out);
+        // save_weight_and_biases_as_csv();
     }
 
     return 0;

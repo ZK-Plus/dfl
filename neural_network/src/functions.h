@@ -1,8 +1,8 @@
 #ifndef DIGIT_RECOGNITION_FUNCTIONS_H
 #define DIGIT_RECOGNITION_FUNCTIONS_H
 
-#define TRAIN_LABELS_FILE_PATH R"(./data/train-labels.idx1-ubyte)"
-#define TRAIN_IMAGES_FILE_PATH R"(./data/train-images.idx3-ubyte)"
+#define TRAIN_LABELS_FILE_PATH R"(./data/iid/train-labels.idx1-ubyte)"
+#define TRAIN_IMAGES_FILE_PATH R"(./data/iid/train-images.idx3-ubyte)"
 #define TEST_LABELS_FILE_PATH R"(./data/t10k-labels.idx1-ubyte)"
 #define TEST_IMAGES_FILE_PATH R"(./data/t10k-images.idx3-ubyte)"
 
@@ -10,12 +10,12 @@
 #define IMAGE_START 16
 #define BATCH_SIZE 32
 
-#define NUM_TRAIN_IMAGES 60000
+#define NUM_TRAIN_IMAGES 10000
 #define NUM_BATCHES (NUM_TRAIN_IMAGES / BATCH_SIZE)
 #define NUM_TEST_IMAGES 10000
 #define LEARNING_RATE 0.1
-#define NUM_EPOCHS 5 // standard value = 500
-#define ACTIVATION_FUNCTION RELU
+#define NUM_EPOCHS 28 // standard value = 500
+#define ACTIVATION_FUNCTION TANH
 
 #define SAVE_WEIGHTS_AND_BIASES true
 #define PRINT_LABELS_AND_IMAGES false

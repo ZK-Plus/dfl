@@ -5,7 +5,9 @@
 #ifndef NEURAL_NETWORK_TRAIN_NETWORK2_H
 #define NEURAL_NETWORK_TRAIN_NETWORK2_H
 
-// Declare the function so other files know it exists and can call it
-int train_network();
+#include <string>
 
-#endif //NEURAL_NETWORK_TRAIN_NETWORK2_H
+// Declare the function so other files know it exists and can call it
+int train_network(const std::string &wb_in, const std::string &wb_out, const std::string &image_path, const std::string &label_path);
+
+#endif // NEURAL_NETWORK_TRAIN_NETWORK2_H

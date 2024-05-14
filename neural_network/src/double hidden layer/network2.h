@@ -30,6 +30,7 @@ derivatives back_prop(const Eigen::MatrixXd &X, const Eigen::MatrixXd &Y, const 
 
 void update_params(weights_and_biases *wab, const derivatives &d, double learning_rate);
 
-int gradient_descent(weights_and_biases &wab, double learning_rate, int epoch);
+int gradient_descent(weights_and_biases &wab, double learning_rate, int epoch, std::string const &image_path,
+                     std::string const &label_path);
 
 #endif // DIGIT_RECOGNITION_NETWORK2_H
