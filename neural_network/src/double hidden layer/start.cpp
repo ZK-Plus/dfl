@@ -19,6 +19,26 @@ using Eigen::MatrixXd;
 #define GREEN_TEXT "\033[1;32m"
 #define RESET_TEXT "\033[0m"
 
+void printBoxLine(int length)
+{
+    std::cout << "+";
+    for (int i = 0; i < length; i++)
+    {
+        std::cout << "-";
+    }
+    std::cout << "+\n";
+}
+
+void printBoxRow(const std::string &content, int length)
+{
+    std::cout << "| " << GREEN_TEXT << content << RESET_TEXT;
+    for (int i = content.length() + 2; i < length; i++)
+    {
+        std::cout << " ";
+    }
+    std::cout << " |\n";
+}
+
 void runTest()
 {
     std::string custom_weights_and_biases_file_path = "./data/results_iid/aggregated.bin";
@@ -54,14 +74,20 @@ void runTest()
     if (PRINT_LABELS_AND_IMAGES)
         print_batch(X, Y, NUM_TEST_IMAGES);
 
-    // Print the accuracy of the trained neural network in green color
-    std::cout << GREEN_TEXT << "Accuracy: " << count << "/" << NUM_TEST_IMAGES << RESET_TEXT << "\n";
+    // Print the accuracy of the trained neural network in a box with a border
+    int boxLength = 20;
+    printBoxLine(boxLength);
+    printBoxRow("Accuracy:", boxLength);
+    printBoxLine(boxLength);
+    printBoxRow(std::to_string(count) + "/" + std::to_string(NUM_TEST_IMAGES), boxLength);
+    printBoxLine(boxLength);
+    std::cout << RESET_TEXT << "\n";
 }
 
 void simulate_fed_avg()
 {
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 5; i++)
     {
         std::cout << "Starting first learning cycle";
 
@@ -175,6 +201,11 @@ int main(int argc, char *argv[])
         else if (std::string(argv[1]) == "simulate")
         {
             simulate_fed_avg();
+            return 0;
+        }
+        else if (std::string(argv[1]) == "get_random_wb")
+        {
+            saveRandomWBasFile();
             return 0;
         }
         else

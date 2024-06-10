@@ -81,6 +81,27 @@ void signal_callback_handler(int signum)
     exit(signum);
 }
 
+void saveRandomWBasFile()
+{
+    weights_and_biases random_start_model;
+    random_start_model.W1 = MatrixXd::Random(L1_SIZE, 784) / 2;
+    random_start_model.B1 = MatrixXd::Random(L1_SIZE, 1) / 2;
+    random_start_model.W2 = MatrixXd::Random(L2_SIZE, L1_SIZE) / 2;
+    random_start_model.B2 = MatrixXd::Random(L2_SIZE, 1) / 2;
+    random_start_model.W3 = MatrixXd::Random(10, L2_SIZE) / 2;
+    random_start_model.B3 = MatrixXd::Random(10, 1) / 2;
+
+    cout << "Saving weights and biases to file...\n";
+    streamoff write_position = 0;
+    write_position = save(random_start_model.W1, write_position, "./data/random_start.bin");
+    write_position = save(random_start_model.B1, write_position, "./data/random_start.bin");
+    write_position = save(random_start_model.W2, write_position, "./data/random_start.bin");
+    write_position = save(random_start_model.B2, write_position, "./data/random_start.bin");
+    write_position = save(random_start_model.W3, write_position, "./data/random_start.bin");
+    save(random_start_model.B3, write_position, "./data/random_start.bin");
+    cout << "Weights and biases saved to file\n";
+}
+
 int train_network(const string &wb_in, const string &wb_out, const string &image_path, const string &label_path)
 {
     // Register signal handler

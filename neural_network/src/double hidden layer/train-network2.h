@@ -10,4 +10,6 @@
 // Declare the function so other files know it exists and can call it
 int train_network(const std::string &wb_in, const std::string &wb_out, const std::string &image_path, const std::string &label_path);
 
+void saveRandomWBasFile();
+
 #endif // NEURAL_NETWORK_TRAIN_NETWORK2_H

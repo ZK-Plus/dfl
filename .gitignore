@@ -3,4 +3,4 @@
 .terraform
 .idea
 !lib/**
-
+node_modules/
