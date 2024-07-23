@@ -19,10 +19,10 @@ contract GMStorage {
     }
 
     function setGlobalModel(string memory _newGlobalModel) external {
-        require(
-            IDeviceRegistry(_device_registry_address).isAuthorized(msg.sender),
-            "Caller is not authorized"
-        );
+        // require(
+        //     IDeviceRegistry(_device_registry_address).isAuthorized(msg.sender),
+        //     "Caller is not authorized"
+        // );
         backupGlobalModel = globalModel;
         globalModel = _newGlobalModel;
     }

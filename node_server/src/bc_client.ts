@@ -1,14 +1,16 @@
 import Web3 from "web3";
 import fs from "fs";
+import 'dotenv/config'
 
 // setup client´
 const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/pFowzUSGYob62Q7i2YVsF0LFUX3WiCT2");
 
 // define smart contract adddresses
-const gm_storage_address: string = "0x2F2C7B8B173A5F12d606dF79D15FB030d3886F80";
+const gm_storage_address: string = process.env.GM_STORAGE_ADDRESS as string;
+const aggregator_address: string = process.env.AGGREGATOR_ADDRESS as string;
 const device_registry_address: string = "";
 
-const privateKey: string = "0xcf285e00a7b51bf21f3f998590a0f3f374d533c43e5e88306148deeb4898fa0b"
+const privateKey: string = process.env.PRIVATE_KEY as string;
 
 
 
@@ -58,6 +60,18 @@ export const setGlobalModel = async (newIpfsAddress: string) => {
         console.error("Error sending transaction: ", error);
         throw error;
     }
+}
+
+
+// get current state from aggregator
+export const getCurrentState = async () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/AggregatorSelection.json", "utf-8"));
+    const address = aggregator_address;
+    const contract = new web3.eth.Contract(abi, address);
+    let state = await contract.methods.getSystemState().call().then((result) => {
+        return result;
+    });
+    return state;
 }
 
 

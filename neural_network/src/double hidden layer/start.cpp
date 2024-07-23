@@ -115,6 +115,9 @@ void simulate_fed_avg()
 
 void start_zerompq_server()
 {
+
+    int number_clients = 2;
+    int counter = 0;
     zmq::context_t context{1};
     zmq::socket_t socket{context, zmq::socket_type::rep};
     socket.bind("tcp://*:5555");
@@ -122,7 +125,7 @@ void start_zerompq_server()
 
     fs::create_directory("./received_models"); // Ensure the directory exists
 
-    while (true)
+    while (true && counter < number_clients)
     {
         zmq::message_t request;
 
@@ -142,6 +145,7 @@ void start_zerompq_server()
         std::ofstream outFile("./received_models/" + filename, std::ios::binary);
         outFile << fileContents;
         outFile.close();
+        counter++;
 
         // Acknowledge file receipt
         socket.send(zmq::str_buffer("File received"), zmq::send_flags::none);
@@ -185,6 +189,7 @@ int main(int argc, char *argv[])
     {
         if (std::string(argv[1]) == "server")
         {
+            std::cout << "Starting server\n";
             start_zerompq_server();
             return 0;
         }
