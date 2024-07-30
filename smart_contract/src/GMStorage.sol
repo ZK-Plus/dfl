@@ -5,24 +5,36 @@ interface IDeviceRegistry {
     function isAuthorized(address _address) external view returns (bool);
 }
 
+interface IAggregatorSelection {
+    function isAggregator(address _address) external view returns (bool);
+}
+
 contract GMStorage {
     string public globalModel;
     string public backupGlobalModel;
-    address private _device_registry_address =
-        0x0aE52af46B2A860ED0EaeC2C41Aa8072C614E7fb;
+    address public device_registry_address;
+    address public aggregator_selection_address;
     mapping(address => uint256) public contributions;
     address[] private contributors;
 
-    constructor() {
+    constructor(
+        address _device_registry_address,
+        address _aggregator_selection_address
+    ) {
         globalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
         backupGlobalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
+        device_registry_address = _device_registry_address;
+        aggregator_selection_address = _aggregator_selection_address;
     }
 
     function setGlobalModel(string memory _newGlobalModel) external {
-        // require(
-        //     IDeviceRegistry(_device_registry_address).isAuthorized(msg.sender),
-        //     "Caller is not authorized"
-        // );
+        // check if caller is the aggregator
+        require(
+            IAggregatorSelection(aggregator_selection_address).isAggregator(
+                msg.sender
+            ),
+            "Caller is not an aggregator"
+        );
         backupGlobalModel = globalModel;
         globalModel = _newGlobalModel;
     }

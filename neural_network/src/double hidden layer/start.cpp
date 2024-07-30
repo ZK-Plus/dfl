@@ -152,14 +152,14 @@ void start_zerompq_server()
     }
 }
 
-void start_zerompq_client(const std::string serverIP)
+void start_zerompq_client(const std::string serverIP, const std::string deviceID)
 {
     zmq::context_t context{1};
     zmq::socket_t socket{context, zmq::socket_type::req};
     socket.connect("tcp://" + serverIP + ":5555");
 
     // Prepare the filename (not actually used to name the file in this example)
-    std::string filename = "simple_rq_socket.bin";
+    std::string filename = "wb_client_" + deviceID + ".bin";
 
     // Send the filename
     socket.send(zmq::buffer(filename), zmq::send_flags::none);
@@ -170,7 +170,7 @@ void start_zerompq_client(const std::string serverIP)
     std::cout << "Server: " << reply.to_string() << std::endl;
 
     // Read the file content
-    std::ifstream file("./src/double hidden layer/w_and_b.bin", std::ios::binary);
+    std::ifstream file("./data/lm.bin", std::ios::binary);
     std::vector<char> contents((std::istreambuf_iterator<char>(file)),
                                std::istreambuf_iterator<char>());
 
@@ -195,12 +195,12 @@ int main(int argc, char *argv[])
         }
         else if (std::string(argv[1]) == "client")
         {
-            start_zerompq_client(argv[2]);
+            start_zerompq_client(argv[2], argv[3]);
             return 0;
         }
         else if (std::string(argv[1]) == "train")
         {
-            train_network("./data/results_iid/aggregated.bin", "./data/results_iid/aggregated.bin", "./data/iid/train-images-0.idx3-ubyte", "./data/iid/train-labels-0.idx1-ubyte");
+            train_network("./data/random_start.bin", "./data/lm.bin", "./data/train-images.idx3-ubyte", "./data/train-labels.idx1-ubyte");
             return 0;
         }
         else if (std::string(argv[1]) == "simulate")
@@ -211,6 +211,11 @@ int main(int argc, char *argv[])
         else if (std::string(argv[1]) == "get_random_wb")
         {
             saveRandomWBasFile();
+            return 0;
+        }
+        else if (std::string(argv[1]) == "aggregate")
+        {
+            federatedAvg("./data/results_iid/wb_client_", "./data/results_iid/aggregated.bin", std::stoi(argv[2]));
             return 0;
         }
         else

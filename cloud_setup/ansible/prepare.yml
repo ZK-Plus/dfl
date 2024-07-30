@@ -9,6 +9,19 @@
       vm2: "./config/env_1.txt"
       vm3: "./config/env_2.txt"
       vm4: "./config/env_3.txt"
+    train_files:
+      vm1: "./config/training_data/train-images-0.idx3-ubyte"
+      vm2: "./config/training_data/train-images-1.idx3-ubyte"
+      vm3: "./config/training_data/train-images-2.idx3-ubyte"
+      vm4: "./config/training_data/train-images-3.idx3-ubyte"
+      vm5: "./config/training_data/train-images-4.idx3-ubyte"
+    label_files:
+      vm1: "./config/training_data/train-labels-0.idx1-ubyte"
+      vm2: "./config/training_data/train-labels-1.idx1-ubyte"
+      vm3: "./config/training_data/train-labels-2.idx1-ubyte"
+      vm4: "./config/training_data/train-labels-3.idx1-ubyte"
+      vm5: "./config/training_data/train-labels-4.idx1-ubyte"
+
   tasks:
     - name: Run apt-get update
       ansible.builtin.apt:
@@ -71,4 +84,26 @@
         src: "{{ lookup('vars', 'env_files')[inventory_hostname] }}"
         dest: "/home/johann/node_server/.env"
 
-  
+    - name: Copy training data to VM
+      ansible.builtin.synchronize:
+        src: "{{ lookup('vars', 'train_files')[inventory_hostname] }}"
+        dest: "/home/johann/node_server/data/train-images.idx3-ubyte"
+        recursive: yes
+
+    - name: Copy label data to VM
+      ansible.builtin.synchronize:
+        src: "{{ lookup('vars', 'label_files')[inventory_hostname] }}"
+        dest: "/home/johann/node_server/data/train-labels.idx1-ubyte"
+        recursive: yes
+
+    - name: Copy test images to VM
+      ansible.builtin.synchronize:
+        src: "./config/test_data/t10k-images.idx3-ubyte"
+        dest: "/home/johann/node_server/data/t10k-images.idx3-ubyte"
+        recursive: yes
+
+    - name: Copy test labels to VM
+      ansible.builtin.synchronize:
+        src: "./config/test_data/t10k-labels.idx1-ubyte"
+        dest: "/home/johann/node_server/data/t10k-labels.idx1-ubyte"
+        recursive: yes

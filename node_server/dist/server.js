@@ -3,22 +3,24 @@ import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import child_process from 'child_process';
-import { getCurrentState } from "./bc_client.js";
+import { getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint } from "./bc_client.js";
+import { getCurrentModel } from "./ipfs.js";
 const trainingProcess = child_process.execFile;
 // Define __dirname manually
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const exePath = path.join(__dirname, '../start.exe');
+const deviceID = process.env.DEVICE_ID;
 let currentState = "";
 const stateMachine = async () => {
     let state = await getCurrentState();
     console.log(state);
-    switch ("TRAINING") {
+    switch (state["0"]) {
         case "TRAINING":
             // check if this node is the current aggregator
             if (state[1] === process.env.ACCOUNT_ADDRESS) {
                 console.log("I am the aggregator");
-                //! open socket
-                const exePath = path.join(__dirname, '../start.exe');
+                // open socket
                 trainingProcess(exePath, ["server"], function (err, data) {
                     if (err) {
                         console.error("Error executing training process:", err);
@@ -29,7 +31,24 @@ const stateMachine = async () => {
             }
             else {
                 console.log("I am not the aggregator");
-                //! start training process
+                //fetch global model from IPFS
+                await getCurrentModel();
+                // execute the local training process
+                trainingProcess(exePath, ["train"], function (err, data) {
+                    if (err) {
+                        console.error("Error executing training process:", err);
+                        return;
+                    }
+                    console.log(data.toString());
+                });
+                // transfer the local model to the aggregator by calling another executable
+                trainingProcess(exePath, ["transfer", String(state["2"]), String(deviceID)], function (err, data) {
+                    if (err) {
+                        console.error("Error executing training process:", err);
+                        return;
+                    }
+                    console.log(data.toString());
+                });
             }
             break;
         case "AGGREGATING":
@@ -42,4 +61,13 @@ const stateMachine = async () => {
             currentState = "IDLE";
     }
 };
-stateMachine();
+//stateMachine();
+getAggregatorEndpoint().then((result) => {
+    console.log(result);
+});
+setAggregatorEndpoint("http://localhost:3000").then((result) => {
+    console.log(result);
+});
+getAggregatorEndpoint().then((result) => {
+    console.log(result);
+});

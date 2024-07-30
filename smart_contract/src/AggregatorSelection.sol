@@ -46,6 +46,10 @@ contract AggregatorSelection {
         return current_aggregator;
     }
 
+    function isAggregator(address _address) external view returns (bool) {
+        return _address == current_aggregator;
+    }
+
     function getBrokerEndpoint() external view returns (string memory) {
         return broker_endpoint;
     }
@@ -58,6 +62,15 @@ contract AggregatorSelection {
         return time_to_select;
     }
 
+    function setSystemState(string memory _state) external {
+        // check if requester is current aggregator
+        require(
+            msg.sender == current_aggregator,
+            "Caller is not the current aggregator"
+        );
+        system_state = _state;
+    }
+
     function setCurrentAggregator(address _aggregator) external {
         current_aggregator = _aggregator;
     }
@@ -65,6 +78,4 @@ contract AggregatorSelection {
     function setBrokerEndpoint(string memory _endpoint) external {
         broker_endpoint = _endpoint;
     }
-
-    //change system state method
 }

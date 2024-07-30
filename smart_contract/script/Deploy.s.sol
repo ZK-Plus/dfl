@@ -38,7 +38,10 @@ contract ContractDeploy is Script {
             address(aggregatorSelection)
         );
 
-        GMStorage gmStorage = new GMStorage();
+        GMStorage gmStorage = new GMStorage(
+            address(0xBA874f9c3C3a68F1d196f29DFE14847590559E12),
+            address(aggregatorSelection)
+        );
         console2.log("Deployed GMStorage to", address(gmStorage));
 
         vm.stopBroadcast();

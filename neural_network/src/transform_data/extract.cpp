@@ -376,7 +376,7 @@ int main()
     // const std::string NEW_TRAIN_LABELS_FILE_PATH = "./data/new_train-labels.idx1-ubyte";
     // // Call the verifyNewLabelsFile method with the path and expected number of zeros
     // verifyNewLabelsFile(NEW_TRAIN_LABELS_FILE_PATH, 5923, 0); // Update the expected count as necessary
-    prepareIID(4, 10000);
+    prepareIID(12, 10000);
     printImages(100);
     //  prepareNIID(100, 0, 7);
     //  printImages(100);

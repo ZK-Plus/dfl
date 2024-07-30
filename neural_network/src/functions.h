@@ -14,7 +14,7 @@
 #define NUM_BATCHES (NUM_TRAIN_IMAGES / BATCH_SIZE)
 #define NUM_TEST_IMAGES 10000
 #define LEARNING_RATE 0.1
-#define NUM_EPOCHS 28 // standard value = 500
+#define NUM_EPOCHS 50 // standard value = 500
 #define ACTIVATION_FUNCTION TANH
 
 #define SAVE_WEIGHTS_AND_BIASES true

@@ -74,5 +74,47 @@ export const getCurrentState = async () => {
     return state;
 }
 
+/* ------------------- Helper functions for state contract ------------------ */
+
+export const getAggregatorEndpoint = async () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/AggregatorSelection.json", "utf-8"));
+    const address = aggregator_address;
+    const contract = new web3.eth.Contract(abi, address);
+    let endpoint = await contract.methods.getBrokerEndpoint().call().then((result) => {
+        return result;
+    });
+    return endpoint;
+}
+
+export const setAggregatorEndpoint = async (newEndpoint: string) => {
+    const abi = JSON.parse(fs.readFileSync("./abi/AggregatorSelection.json", "utf-8"));
+    const address = aggregator_address;
+    const contract = new web3.eth.Contract(abi, address);
+
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await contract.methods.setBrokerEndpoint(newEndpoint).estimateGas({ from: account.address });
+
+    const tx = {
+        from: account.address,
+        to: address,
+        gas: gasEstimate,
+        gasPrice: gasPrice,
+        data: contract.methods.setBrokerEndpoint(newEndpoint).encodeABI(),
+    };
+
+    try {
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction as string);
+        console.log("Transaction receipt: ", receipt);
+        return receipt;
+    } catch (error) {
+        console.error("Error sending transaction: ", error);
+        throw error;
+    }
+}
+
 
    
