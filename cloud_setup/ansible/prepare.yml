@@ -1,19 +1,37 @@
 ---
 - name: prepare
-  hosts: azure_vms
+  hosts: cloud_vms
   become: yes
   vars:
     ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+    env_files:
+      vm1: "./config/env_0.txt"
+      vm2: "./config/env_1.txt"
+      vm3: "./config/env_2.txt"
+      vm4: "./config/env_3.txt"
+    train_files:
+      vm1: "./config/training_data/train-images-0.idx3-ubyte"
+      vm2: "./config/training_data/train-images-1.idx3-ubyte"
+      vm3: "./config/training_data/train-images-2.idx3-ubyte"
+      vm4: "./config/training_data/train-images-3.idx3-ubyte"
+      vm5: "./config/training_data/train-images-4.idx3-ubyte"
+    label_files:
+      vm1: "./config/training_data/train-labels-0.idx1-ubyte"
+      vm2: "./config/training_data/train-labels-1.idx1-ubyte"
+      vm3: "./config/training_data/train-labels-2.idx1-ubyte"
+      vm4: "./config/training_data/train-labels-3.idx1-ubyte"
+      vm5: "./config/training_data/train-labels-4.idx1-ubyte"
+
   tasks:
     - name: Run apt-get update
       ansible.builtin.apt:
         update_cache: yes
         cache_valid_time: 3600 # Optional: cache valid for 1 hour to avoid redundant updates
 
-    - name: Run apt-get upgrade
-      ansible.builtin.apt:
-        upgrade: dist
-        update_cache: yes
+    # - name: Run apt-get upgrade
+    #   ansible.builtin.apt:
+    #     upgrade: dist
+    #     update_cache: yes
 
     - name: Install ZeroMQ library
       ansible.builtin.apt:
@@ -21,8 +39,71 @@
         state: present
         update_cache: yes
 
-    - name: Efficiently copy src folder to VMs
+    - name: Install build-essential
+      ansible.builtin.apt:
+        name: build-essential
+        state: present
+        update_cache: yes
+
+    # - name: Cloning the snpguest repo
+    #   ansible.builtin.git:
+    #     repo: https://github.com/virtee/snpguest.git
+    #     dest: "/home/johann/snpguest"
+
+    # - name: Execute rustup installation script
+    #   ansible.builtin.shell:
+    #     cmd: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+    #   args:
+    #     creates: "{{ ansible_env.HOME }}/.cargo/bin/rustup"
+
+    # - name: Execute cargo build command
+    #   ansible.builtin.shell:
+    #     cmd: "source $HOME/.cargo/env && cargo build -r"
+    #     chdir: "/home/johann/snpguest"
+    #     executable: /bin/bash
+
+    - name: Install NVM and Node.js
+      ansible.builtin.shell:
+        cmd: >
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash &&
+          export NVM_DIR="$HOME/.nvm" &&
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" &&
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+          nvm install 20
+        executable: /bin/bash
+        #creates: "$HOME/.nvm"
+
+    - name: Copy node server
       ansible.builtin.synchronize:
-        src: "../../node_code/"
-        dest: "./training/"
+        src: "../../node_server/"
+        dest: "/home/johann/node_server"
+        recursive: yes
+
+    - name: Copy local txt file to .env file on VM
+      ansible.builtin.copy:
+        src: "{{ lookup('vars', 'env_files')[inventory_hostname] }}"
+        dest: "/home/johann/node_server/.env"
+
+    - name: Copy training data to VM
+      ansible.builtin.synchronize:
+        src: "{{ lookup('vars', 'train_files')[inventory_hostname] }}"
+        dest: "/home/johann/node_server/data/train-images.idx3-ubyte"
+        recursive: yes
+
+    - name: Copy label data to VM
+      ansible.builtin.synchronize:
+        src: "{{ lookup('vars', 'label_files')[inventory_hostname] }}"
+        dest: "/home/johann/node_server/data/train-labels.idx1-ubyte"
+        recursive: yes
+
+    - name: Copy test images to VM
+      ansible.builtin.synchronize:
+        src: "./config/test_data/t10k-images.idx3-ubyte"
+        dest: "/home/johann/node_server/data/t10k-images.idx3-ubyte"
+        recursive: yes
+
+    - name: Copy test labels to VM
+      ansible.builtin.synchronize:
+        src: "./config/test_data/t10k-labels.idx1-ubyte"
+        dest: "/home/johann/node_server/data/t10k-labels.idx1-ubyte"
         recursive: yes

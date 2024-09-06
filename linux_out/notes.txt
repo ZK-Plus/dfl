@@ -1,0 +1,4 @@
+Compilation command:
+
+g++ -o start.exe start.o train-network2.o network2.o functions.o -O3 -DNDEBUG -g -Wall -std=c++17 -lzmq
+

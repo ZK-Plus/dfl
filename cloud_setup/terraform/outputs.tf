@@ -1,13 +1,5 @@
-output "resource_group_name" {
-  value = azurerm_resource_group.rg.name
-}
-
+// Output the external IP addresses of the Compute Engine instances
 output "public_ip_addresses" {
-  value = { for ip in azurerm_linux_virtual_machine.my_terraform_vm : ip.name => ip.public_ip_address }
+  value = { for instance in google_compute_instance.my_terraform_vm : instance.name => instance.network_interface[0].access_config[0].nat_ip }
   description = "The public IP addresses of the VMs"
-}
-
-output "private_key_data" {
-  value     = jsondecode(azapi_resource_action.ssh_public_key_gen.output).privateKey
-  sensitive = true
 }
