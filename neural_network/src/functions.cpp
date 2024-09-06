@@ -62,6 +62,17 @@ void federatedAvg(const string &pathToFiles, const string outputPath, int numFil
     B2 = sumB2 / numFiles;
     W3 = sumW3 / numFiles;
     B3 = sumB3 / numFiles;
+
+    // save the new weights and biases to the output file
+    streamoff write_position = 0;
+    write_position = save(W1, write_position, outputPath);
+    write_position = save(B1, write_position, outputPath);
+    write_position = save(W2, write_position, outputPath);
+    write_position = save(B2, write_position, outputPath);
+    write_position = save(W3, write_position, outputPath);
+    save(B3, write_position, outputPath);
+
+    cout << "Federated averaging complete\n";
 }
 
 streamoff save(const MatrixXd &X, streamoff position, const string &path)

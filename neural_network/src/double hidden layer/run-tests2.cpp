@@ -7,27 +7,31 @@
 using namespace std;
 using Eigen::MatrixXd;
 
-int main() {
-    // Obtain the testing set
+int main()
+{
+
+    string custom_weights_and_biases_file_path = "./data/results_iid/aggregated.bin";
+    // string custom_weights_and_biases_file_path = WEIGHTS_AND_BIASES_FILE_PATH;
+    //   Obtain the testing set
     MatrixXd X = get_images(0, NUM_TEST_IMAGES, TEST_IMAGES_FILE_PATH);
     MatrixXd Y = get_labels(0, NUM_TEST_IMAGES, TEST_LABELS_FILE_PATH);
 
     // Extract the weights and biases from file
     weights_and_biases wab;
-    wab.W1 = MatrixXd::Random(L1_SIZE, 784)/2;
-    wab.B1 = MatrixXd::Random(L1_SIZE, 1)/2;
-    wab.W2 = MatrixXd::Random(L2_SIZE, L1_SIZE)/2;
-    wab.B2 = MatrixXd::Random(L2_SIZE, 1)/2;
-    wab.W3 = MatrixXd::Random(10, L2_SIZE)/2;
-    wab.B3 = MatrixXd::Random(10, 1)/2;
+    wab.W1 = MatrixXd::Random(L1_SIZE, 784) / 2;
+    wab.B1 = MatrixXd::Random(L1_SIZE, 1) / 2;
+    wab.W2 = MatrixXd::Random(L2_SIZE, L1_SIZE) / 2;
+    wab.B2 = MatrixXd::Random(L2_SIZE, 1) / 2;
+    wab.W3 = MatrixXd::Random(10, L2_SIZE) / 2;
+    wab.B3 = MatrixXd::Random(10, 1) / 2;
 
     streamoff read_position = 0;
-    read_position = read(&wab.W1, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    read_position = read(&wab.B1, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    read_position = read(&wab.W2, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    read_position = read(&wab.B2, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    read_position = read(&wab.W3, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
-    read(&wab.B3, read_position, WEIGHTS_AND_BIASES_FILE_PATH);
+    read_position = read(&wab.W1, read_position, custom_weights_and_biases_file_path);
+    read_position = read(&wab.B1, read_position, custom_weights_and_biases_file_path);
+    read_position = read(&wab.W2, read_position, custom_weights_and_biases_file_path);
+    read_position = read(&wab.B2, read_position, custom_weights_and_biases_file_path);
+    read_position = read(&wab.W3, read_position, custom_weights_and_biases_file_path);
+    read(&wab.B3, read_position, custom_weights_and_biases_file_path);
 
     // Do forward propagation with the stored weights and biases
     states_and_activations fp = forward_prop(X, wab);

@@ -1,0 +1,24 @@
+---
+- name: prepare
+  hosts: zkp_vms
+  become: yes
+  vars:
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
+  tasks:
+    - name: Run apt-get update
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600 # Optional: cache valid for 1 hour to avoid redundant updates
+
+    - name: Install build-essential
+      ansible.builtin.apt:
+        name: build-essential
+        state: present
+        update_cache: yes
+
+    - name: Copy test labels to VM
+      ansible.builtin.synchronize:
+        src: "/Users/johann/Documents/Code/zkp-foundry/"
+        dest: "/home/johann/zkp-foundry"
+        recursive: yes

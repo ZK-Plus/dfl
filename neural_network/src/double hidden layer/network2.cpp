@@ -9,7 +9,8 @@ using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-states_and_activations forward_prop(const Eigen::MatrixXd &X, const weights_and_biases &wab) {
+states_and_activations forward_prop(const Eigen::MatrixXd &X, const weights_and_biases &wab)
+{
     // Initialize return struct
     states_and_activations fp;
 
@@ -40,7 +41,6 @@ states_and_activations forward_prop(const Eigen::MatrixXd &X, const weights_and_
     else if (ACTIVATION_FUNCTION == LEAKY_RELU)
         fp.A2 = fp.Z2.array().unaryExpr(&leaky_ReLU);
 
-
     // Layer 3 (Output layer)
     fp.Z3 = wab.W3 * fp.A2 + wab.B3 * MatrixXd::Ones(1, BATCH_SIZE);
     fp.A3 = softmax(fp.Z3);
@@ -49,7 +49,8 @@ states_and_activations forward_prop(const Eigen::MatrixXd &X, const weights_and_
 }
 
 derivatives back_prop(const Eigen::MatrixXd &X, const Eigen::MatrixXd &Y, const states_and_activations &saa,
-                      const weights_and_biases &wab) {
+                      const weights_and_biases &wab)
+{
     // Initialize return struct
     derivatives bp;
 
@@ -75,9 +76,9 @@ derivatives back_prop(const Eigen::MatrixXd &X, const Eigen::MatrixXd &Y, const 
     if (ACTIVATION_FUNCTION == TANH)
         bp.dZ2 = (wab.W3.transpose() * bp.dZ3).cwiseProduct(deriv_tanh(saa.Z2));
     else if (ACTIVATION_FUNCTION == RELU)
-        bp.dZ2 = (wab.W3.transpose() * bp.dZ3).cwiseProduct((MatrixXd) saa.Z2.array().unaryExpr(&deriv_ReLU));
+        bp.dZ2 = (wab.W3.transpose() * bp.dZ3).cwiseProduct((MatrixXd)saa.Z2.array().unaryExpr(&deriv_ReLU));
     else if (ACTIVATION_FUNCTION == LEAKY_RELU)
-        bp.dZ2 = (wab.W3.transpose() * bp.dZ3).cwiseProduct((MatrixXd) saa.Z2.array().unaryExpr(&deriv_leaky_ReLU));
+        bp.dZ2 = (wab.W3.transpose() * bp.dZ3).cwiseProduct((MatrixXd)saa.Z2.array().unaryExpr(&deriv_leaky_ReLU));
     bp.dW2 = (1.0 / BATCH_SIZE) * bp.dZ2 * X.transpose();
     bp.dB2 = (1.0 / BATCH_SIZE) * bp.dZ2.rowwise().sum();
 
@@ -85,16 +86,17 @@ derivatives back_prop(const Eigen::MatrixXd &X, const Eigen::MatrixXd &Y, const 
     if (ACTIVATION_FUNCTION == TANH)
         bp.dZ1 = (wab.W2.transpose() * bp.dZ2).cwiseProduct(deriv_tanh(saa.Z1));
     else if (ACTIVATION_FUNCTION == RELU)
-        bp.dZ1 = (wab.W2.transpose() * bp.dZ2).cwiseProduct((MatrixXd) saa.Z1.array().unaryExpr(&deriv_ReLU));
+        bp.dZ1 = (wab.W2.transpose() * bp.dZ2).cwiseProduct((MatrixXd)saa.Z1.array().unaryExpr(&deriv_ReLU));
     else if (ACTIVATION_FUNCTION == LEAKY_RELU)
-        bp.dZ1 = (wab.W2.transpose() * bp.dZ2).cwiseProduct((MatrixXd) saa.Z1.array().unaryExpr(&deriv_leaky_ReLU));
+        bp.dZ1 = (wab.W2.transpose() * bp.dZ2).cwiseProduct((MatrixXd)saa.Z1.array().unaryExpr(&deriv_leaky_ReLU));
     bp.dW1 = (1.0 / BATCH_SIZE) * bp.dZ1 * X.transpose();
     bp.dB1 = (1.0 / BATCH_SIZE) * bp.dZ1.rowwise().sum();
 
     return bp;
 }
 
-void update_params(weights_and_biases *wab, const derivatives &d, double learning_rate) {
+void update_params(weights_and_biases *wab, const derivatives &d, double learning_rate)
+{
     // Update the weights and biases by moving in the direction of the steepest descent
     wab->W1 -= learning_rate * d.dW1;
     wab->B1 -= learning_rate * d.dB1;
@@ -104,14 +106,16 @@ void update_params(weights_and_biases *wab, const derivatives &d, double learnin
     wab->B3 -= learning_rate * d.dB3;
 }
 
-int gradient_descent(weights_and_biases &wab, double learning_rate, int epoch) {
+int gradient_descent(weights_and_biases &wab, double learning_rate, int epoch, string const &image_path,
+                     string const &label_path)
+{
     // Initialize derivative matrices to 0.
     // Note, these are basically storing the "nudges" that will be done to W1, B1, W2, and B2
     derivatives d;
     d.dW1 = MatrixXd::Zero(L1_SIZE, 784);
     d.dB1 = MatrixXd::Zero(L1_SIZE, 1);
-    d.dW2 = MatrixXd::Zero(L2_SIZE, L1_SIZE)/2;
-    d.dB2 = MatrixXd::Zero(L2_SIZE, 1)/2;
+    d.dW2 = MatrixXd::Zero(L2_SIZE, L1_SIZE) / 2;
+    d.dB2 = MatrixXd::Zero(L2_SIZE, 1) / 2;
     d.dW3 = MatrixXd::Zero(10, L2_SIZE);
     d.dB3 = MatrixXd::Zero(10, 1);
 
@@ -129,10 +133,11 @@ int gradient_descent(weights_and_biases &wab, double learning_rate, int epoch) {
     shuffle(data_offsets, data_offsets + NUM_TRAIN_IMAGES, std::default_random_engine(seed));
 
     // For every training image, go through gradient descent in mini-batches
-    for (int i = 0; i < NUM_TRAIN_IMAGES; i += BATCH_SIZE) {
+    for (int i = 0; i < NUM_TRAIN_IMAGES; i += BATCH_SIZE)
+    {
         // Get image and label batch
-        MatrixXd X = get_image_batch(data_offsets, i, BATCH_SIZE, TRAIN_IMAGES_FILE_PATH);
-        MatrixXd Y = get_label_batch(data_offsets, i, BATCH_SIZE, TRAIN_LABELS_FILE_PATH);
+        MatrixXd X = get_image_batch(data_offsets, i, BATCH_SIZE, image_path);
+        MatrixXd Y = get_label_batch(data_offsets, i, BATCH_SIZE, label_path);
 
         // Optionally print out the training labels and images
         if (PRINT_LABELS_AND_IMAGES)

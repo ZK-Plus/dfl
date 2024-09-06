@@ -3,14 +3,11 @@ terraform {
   required_version = ">=0.12"
 
   required_providers {
-    azapi = {
-      source  = "azure/azapi"
-      version = "~>1.5"
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 5.26" 
     }
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~>3.0"
-    }
+  
     random = {
       source  = "hashicorp/random"
       version = "~>3.0"
@@ -18,6 +15,8 @@ terraform {
   }
 }
 
-provider "azurerm" {
-  features {}
+provider "google-beta" {
+  project = "master-420616"
+  region  = "europe-west3"
+  zone    = "europe-west3-c"
 }

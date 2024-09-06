@@ -7,6 +7,8 @@ network-1: train-network1.exe run-tests1.exe;
 
 network-2: train-network2.exe run-tests2.exe;
 
+test: run-tests2.exe;
+
 start: start.exe;
 
 conv-network: conv-train-network.exe conv-run-tests.exe;
