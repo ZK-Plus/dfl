@@ -43,6 +43,6 @@ variable "username" {
 variable "vm_count" {
   type       = number
   description = "The number of virtual machines including the aggregator."
-  default     = 2
+  default     = 1
   nullable = false
 }

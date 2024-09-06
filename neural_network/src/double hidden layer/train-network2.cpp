@@ -2,7 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <Eigen/Dense>
-
+#include <signal.h>
 #include "../functions.h"
 #include "train-network2.h"
 #include "network2.h"

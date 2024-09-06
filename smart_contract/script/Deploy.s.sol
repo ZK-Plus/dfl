@@ -32,7 +32,9 @@ contract ContractDeploy is Script {
 
         vm.startBroadcast(deployerKey);
 
-        AggregatorSelection aggregatorSelection = new AggregatorSelection();
+        AggregatorSelection aggregatorSelection = new AggregatorSelection(
+            address(0x607B2b2229eba34075fEEEF2E43AC96481133A58)
+        );
         console2.log(
             "Deployed AggregatorSelection to",
             address(aggregatorSelection)

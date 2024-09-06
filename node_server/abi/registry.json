@@ -1,0 +1,267 @@
+[
+    {
+        "type": "constructor",
+        "inputs": [
+            {
+                "name": "_verifier",
+                "type": "address",
+                "internalType": "contract IRiscZeroVerifier"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "authorizeAddress",
+        "inputs": [
+            {
+                "name": "_address",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "deauthorizeAddress",
+        "inputs": [
+            {
+                "name": "_address",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "devices",
+        "inputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "authorized",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "public_ip",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "msg_broker_ip",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "public_key",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getDevice",
+        "inputs": [
+            {
+                "name": "_address",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "imageId",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "isAuthorized",
+        "inputs": [
+            {
+                "name": "_address",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "number",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "registerDevice",
+        "inputs": [
+            {
+                "name": "x",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "seal",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "_address",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "_public_ip",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "_msg_broker_ip",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "_public_key",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "registerDeviceWithoutProof",
+        "inputs": [
+            {
+                "name": "_address",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "_public_ip",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "_msg_broker_ip",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "_public_key",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "runProof",
+        "inputs": [
+            {
+                "name": "seal",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "x",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "set",
+        "inputs": [
+            {
+                "name": "x",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "seal",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "verifier",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "contract IRiscZeroVerifier"
+            }
+        ],
+        "stateMutability": "view"
+    }
+]

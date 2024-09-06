@@ -75,35 +75,41 @@
 
     - name: Copy node server
       ansible.builtin.synchronize:
-        src: "../../node_server/"
-        dest: "/home/johann/node_server"
+        src: "../../node_code/"
+        dest: "/home/johann/node_code"
         recursive: yes
 
-    - name: Copy local txt file to .env file on VM
-      ansible.builtin.copy:
-        src: "{{ lookup('vars', 'env_files')[inventory_hostname] }}"
-        dest: "/home/johann/node_server/.env"
-
-    - name: Copy training data to VM
+    - name: Copy neural network code
       ansible.builtin.synchronize:
-        src: "{{ lookup('vars', 'train_files')[inventory_hostname] }}"
-        dest: "/home/johann/node_server/data/train-images.idx3-ubyte"
+        src: "../../neural_network/"
+        dest: "/home/johann/neural_network"
         recursive: yes
 
-    - name: Copy label data to VM
-      ansible.builtin.synchronize:
-        src: "{{ lookup('vars', 'label_files')[inventory_hostname] }}"
-        dest: "/home/johann/node_server/data/train-labels.idx1-ubyte"
-        recursive: yes
+    # - name: Copy local txt file to .env file on VM
+    #   ansible.builtin.copy:
+    #     src: "{{ lookup('vars', 'env_files')[inventory_hostname] }}"
+    #     dest: "/home/johann/node_server/.env"
 
-    - name: Copy test images to VM
-      ansible.builtin.synchronize:
-        src: "./config/test_data/t10k-images.idx3-ubyte"
-        dest: "/home/johann/node_server/data/t10k-images.idx3-ubyte"
-        recursive: yes
+    # - name: Copy training data to VM
+    #   ansible.builtin.synchronize:
+    #     src: "{{ lookup('vars', 'train_files')[inventory_hostname] }}"
+    #     dest: "/home/johann/node_server/data/train-images.idx3-ubyte"
+    #     recursive: yes
 
-    - name: Copy test labels to VM
-      ansible.builtin.synchronize:
-        src: "./config/test_data/t10k-labels.idx1-ubyte"
-        dest: "/home/johann/node_server/data/t10k-labels.idx1-ubyte"
-        recursive: yes
+    # - name: Copy label data to VM
+    #   ansible.builtin.synchronize:
+    #     src: "{{ lookup('vars', 'label_files')[inventory_hostname] }}"
+    #     dest: "/home/johann/node_server/data/train-labels.idx1-ubyte"
+    #     recursive: yes
+
+    # - name: Copy test images to VM
+    #   ansible.builtin.synchronize:
+    #     src: "./config/test_data/t10k-images.idx3-ubyte"
+    #     dest: "/home/johann/node_server/data/t10k-images.idx3-ubyte"
+    #     recursive: yes
+
+    # - name: Copy test labels to VM
+    #   ansible.builtin.synchronize:
+    #     src: "./config/test_data/t10k-labels.idx1-ubyte"
+    #     dest: "/home/johann/node_server/data/t10k-labels.idx1-ubyte"
+    #     recursive: yes

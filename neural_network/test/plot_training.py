@@ -23,13 +23,13 @@ def plot_metrics():
         label="CPU Usage (%)",
         color="#17BEBB",
     )
-    ax1.tick_params(axis="y", labelcolor="#2E282A")
+    ax1.tick_params(axis="y", labelcolor="#0F7F7D")
 
     # Create a second y-axis to plot memory usage
     ax2 = ax1.twinx()
     (memory_line,) = ax2.plot(
         metrics_df["relative_time"],
-        metrics_df["memory_percent"],
+        metrics_df["memory_percent"] * 100,
         label="Memory Usage (%)",
         color="#EF3E36",
     )
@@ -69,10 +69,15 @@ def plot_metrics():
     # )
 
     # Add a title and show the plot
-    fig.tight_layout()
+    fig.tight_layout(pad=4)
+    # Add x-axis label
+    ax1.set_xlabel("Time (seconds)")
+    # Add grid lines for the y-axis
+    ax1.yaxis.grid(True, which="major", linestyle="--", linewidth=0.5, color="grey")
+    # SECTIONax2.yaxis.grid(True, which="major", linestyle="--", linewidth=0.5, color="grey")
     # display legend
     fig.legend(
-        handles=[cpu_line, memory_line], loc="upper left", bbox_to_anchor=(0.1, 0.98)
+        handles=[cpu_line, memory_line], loc="upper left", bbox_to_anchor=(0.1, 1)
     )
     plt.show()
 
