@@ -102,7 +102,7 @@ void saveRandomWBasFile()
     cout << "Weights and biases saved to file\n";
 }
 
-int train_network(const string &wb_in, const string &wb_out, const string &image_path, const string &label_path)
+int train_network(const string &wb_in, const string &wb_out, const string &image_path, const string &label_path, const int epoch_amount)
 {
     // Register signal handler
     signal(SIGINT, signal_callback_handler);
@@ -125,7 +125,7 @@ int train_network(const string &wb_in, const string &wb_out, const string &image
     }
 
     // For each epoch, perform gradient descent and update weights and biases
-    for (int epoch = 1; epoch <= NUM_EPOCHS; epoch++)
+    for (int epoch = 1; epoch <= epoch_amount; epoch++)
     {
         // Get start time
         auto start = chrono::high_resolution_clock::now();
@@ -140,7 +140,7 @@ int train_network(const string &wb_in, const string &wb_out, const string &image
         double duration = (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000000.0;
 
         // Calculate remaining time
-        int seconds = (int)duration * (NUM_EPOCHS - epoch);
+        int seconds = (int)duration * (epoch_amount - epoch);
         int minutes = seconds / 60;
         int hours = minutes / 60;
         minutes %= 60;

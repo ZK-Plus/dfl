@@ -46,3 +46,9 @@ variable "vm_count" {
   default     = 1
   nullable = false
 }
+
+variable "enable_sev_snp_confidentiality" {
+  description = "Enable AMD SEV-SNP Confidential Compute"
+  type        = bool
+  default     = false
+}

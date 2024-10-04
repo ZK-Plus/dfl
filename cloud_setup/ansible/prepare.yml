@@ -73,11 +73,11 @@
         executable: /bin/bash
         #creates: "$HOME/.nvm"
 
-    - name: Copy node server
-      ansible.builtin.synchronize:
-        src: "../../node_code/"
-        dest: "/home/johann/node_code"
-        recursive: yes
+    # - name: Copy node server
+    #   ansible.builtin.synchronize:
+    #     src: "../../node_code/"
+    #     dest: "/home/johann/node_code"
+    #     recursive: yes
 
     - name: Copy neural network code
       ansible.builtin.synchronize:
