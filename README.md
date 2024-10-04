@@ -9,3 +9,5 @@ The folders represent different components of the MVP.
 - Node Server: Logic for the components inside the edge devices.
 - Remote attestation Code: zkVM-based remote attestation.
 - Smart Contract: Foundry Project including all smart contracts and interfaces.
+
+![Decentralized Federated Learning](./node_server/arch/operational_flow.pdf)
