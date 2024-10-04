@@ -55,10 +55,21 @@ resource "google_compute_instance" "my_terraform_vm" {
   deletion_protection = false
   enable_display      = false
 
-  confidential_instance_config {
-    enable_confidential_compute = true
-    confidential_instance_type = "SEV_SNP"
+  # Conditionally include the confidential_instance_config block
+  dynamic "confidential_instance_config" {
+    for_each = var.enable_sev_snp_confidentiality ? [1] : []
+    content {
+      enable_confidential_compute = true
+      confidential_instance_type  = "SEV_SNP"
+    }
   }
+
+  #Disable vTPM and Integrity Monitoring for performance improvement
+  # shielded_instance_config {
+  #   enable_secure_boot          = false
+  #   enable_vtpm                 = false
+  #   enable_integrity_monitoring = false
+  # }
 
 
   boot_disk {

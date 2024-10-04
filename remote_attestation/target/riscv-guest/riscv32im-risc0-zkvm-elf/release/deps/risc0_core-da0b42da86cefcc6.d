@@ -1,0 +1,10 @@
+/Users/johann/Documents/Code/zkp-foundry/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/deps/librisc0_core-da0b42da86cefcc6.rmeta: /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/lib.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/mod.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/baby_bear.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/goldilocks.rs
+
+/Users/johann/Documents/Code/zkp-foundry/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/deps/librisc0_core-da0b42da86cefcc6.rlib: /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/lib.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/mod.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/baby_bear.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/goldilocks.rs
+
+/Users/johann/Documents/Code/zkp-foundry/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/deps/risc0_core-da0b42da86cefcc6.d: /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/lib.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/mod.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/baby_bear.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/goldilocks.rs
+
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/lib.rs:
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/mod.rs:
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/baby_bear.rs:
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/risc0-core-1.0.1/src/field/goldilocks.rs:
