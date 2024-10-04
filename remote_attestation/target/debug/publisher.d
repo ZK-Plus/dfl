@@ -1,0 +1,1 @@
+/Users/johann/Documents/Code/zkp-foundry/target/debug/publisher: /Users/johann/Documents/Code/zkp-foundry/apps/src/bin/publisher.rs /Users/johann/Documents/Code/zkp-foundry/methods/build.rs /Users/johann/Documents/Code/zkp-foundry/methods/src/lib.rs /Users/johann/Documents/Code/zkp-foundry/target/debug/build/methods-4639a407dc4094d5/out/methods.rs

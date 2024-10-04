@@ -95,11 +95,11 @@ void simulate_fed_avg()
 
         // Create threads for each training
         threads.emplace_back([]()
-                             { train_network("./data/results_iid/aggregated.bin", "./data/results_iid/wb_client_0.bin", "./data/iid/train-images-0.idx3-ubyte", "./data/iid/train-labels-0.idx1-ubyte"); });
+                             { train_network("./data/results_iid/aggregated.bin", "./data/results_iid/wb_client_0.bin", "./data/iid/train-images-0.idx3-ubyte", "./data/iid/train-labels-0.idx1-ubyte", 30); });
         threads.emplace_back([]()
-                             { train_network("./data/results_iid/aggregated.bin", "./data/results_iid/wb_client_1.bin", "./data/iid/train-images-1.idx3-ubyte", "./data/iid/train-labels-1.idx1-ubyte"); });
+                             { train_network("./data/results_iid/aggregated.bin", "./data/results_iid/wb_client_1.bin", "./data/iid/train-images-1.idx3-ubyte", "./data/iid/train-labels-1.idx1-ubyte", 30); });
         threads.emplace_back([]()
-                             { train_network("./data/results_iid/aggregated.bin", "./data/results_iid/wb_client_2.bin", "./data/iid/train-images-2.idx3-ubyte", "./data/iid/train-labels-2.idx1-ubyte"); });
+                             { train_network("./data/results_iid/aggregated.bin", "./data/results_iid/wb_client_2.bin", "./data/iid/train-images-2.idx3-ubyte", "./data/iid/train-labels-2.idx1-ubyte", 30); });
 
         // Wait for all threads to finish
         for (auto &thread : threads)
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
         }
         else if (std::string(argv[1]) == "train")
         {
-            train_network("./data/random_start.bin", "./data/lm.bin", "./data/train-images.idx3-ubyte", "./data/train-labels.idx1-ubyte");
+            train_network("./data/random_start.bin", "./data/lm.bin", "./data/train-images.idx3-ubyte", "./data/train-labels.idx1-ubyte", std::stoi(argv[2]));
             return 0;
         }
         else if (std::string(argv[1]) == "simulate")

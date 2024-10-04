@@ -1,0 +1,11 @@
+/Users/johann/Documents/Code/zkp-foundry/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/deps/libsignature-02949f123913f828.rmeta: /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/lib.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/error.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/signature.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/signer.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/verifier.rs
+
+/Users/johann/Documents/Code/zkp-foundry/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/deps/libsignature-02949f123913f828.rlib: /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/lib.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/error.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/signature.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/signer.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/verifier.rs
+
+/Users/johann/Documents/Code/zkp-foundry/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/deps/signature-02949f123913f828.d: /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/lib.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/error.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/signature.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/signer.rs /Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/verifier.rs
+
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/lib.rs:
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/error.rs:
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/signature.rs:
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/signer.rs:
+/Users/johann/.cargo/registry/src/index.crates.io-6f17d22bba15001f/signature-1.3.2/src/verifier.rs:

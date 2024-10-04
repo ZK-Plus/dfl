@@ -1,5 +1,14 @@
 CC= g++
-CFLAGS= -I "./lib/eigen-3.4.0" -I"./lib/zmq" -I "./src/" -I "./lib/zmq/4.3.5_1/include" -L./lib/zmq/4.3.5_1/lib -lzmq -O3 -DNDEBUG -g -Wall -std=c++17 # -pg -no-pie
+CFLAGS= -I "./lib/eigen-3.4.0" \
+        -I"./lib/zmq" \
+        -I "/opt/homebrew/Cellar/openssl@3/3.3.1/include" \
+        -I "./lib/zmq/4.3.5_1/include" \
+        -I "usr/local" \
+        -L./lib/zmq/4.3.5_1/lib \
+        -L/opt/homebrew/Cellar/openssl@3/3.3.1/lib \
+        -lzmq \
+        -lssl -lcrypto \
+        -O3 -DNDEBUG -g -Wall -std=c++17 
 
 all: network-1 network-2 conv-network
 

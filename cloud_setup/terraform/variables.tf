@@ -43,6 +43,12 @@ variable "username" {
 variable "vm_count" {
   type       = number
   description = "The number of virtual machines including the aggregator."
-  default     = 2
+  default     = 1
   nullable = false
+}
+
+variable "enable_sev_snp_confidentiality" {
+  description = "Enable AMD SEV-SNP Confidential Compute"
+  type        = bool
+  default     = true
 }
