@@ -10,4 +10,4 @@ The folders represent different components of the MVP.
 - Remote attestation Code: zkVM-based remote attestation.
 - Smart Contract: Foundry Project including all smart contracts and interfaces.
 
-![Decentralized Federated Learning](./node_server/arch/operational_flow.pdf)
+![Decentralized Federated Learning](./node_server/arch/operational_flow.jpg "Operational Flow")
