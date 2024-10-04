@@ -332,14 +332,6 @@ void federatedAvg(const string &pathToFiles, const string outputPath, int numFil
     write_position = save(W3, write_position, outputPath);
     save(B3, write_position, outputPath);
 
-    // Encrypt the global model
-    string encryptedModel;
-    unsigned char aesKey[AES_KEY_LENGTH / 8]; // AES-256 key
-    unsigned char iv[16];                     // Initialization vector
-    RAND_bytes(aesKey, sizeof(aesKey));       // Generate random AES key
-    RAND_bytes(iv, sizeof(iv));               // Generate random IV
-    encryptGlobalModel(W1, encryptedModel, aesKey, iv);
-
     // Sign the global model
     string signature;
     signGlobalModel(W1, privateKey, signature);

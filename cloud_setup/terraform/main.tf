@@ -65,11 +65,11 @@ resource "google_compute_instance" "my_terraform_vm" {
   }
 
   #Disable vTPM and Integrity Monitoring for performance improvement
-  shielded_instance_config {
-    enable_secure_boot          = false
-    enable_vtpm                 = false
-    enable_integrity_monitoring = false
-  }
+  # shielded_instance_config {
+  #   enable_secure_boot          = false
+  #   enable_vtpm                 = false
+  #   enable_integrity_monitoring = false
+  # }
 
 
   boot_disk {
