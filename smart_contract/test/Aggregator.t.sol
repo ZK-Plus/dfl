@@ -14,7 +14,8 @@ contract AggregatorTest is Test {
     function test_isAggregator() public {
         assert(
             aggregatorSelection.isAggregator(
-                address(0x927507b066B40C5a6b0fd327eFE1c9d33edeE759)
+                //address(0x927507b066B40C5a6b0fd327eFE1c9d33edeE759)
+                address(0x6004D395731f85938177d5B07aCfEc2D5D7ECcB0)
             )
         );
     }

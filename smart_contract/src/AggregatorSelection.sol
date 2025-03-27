@@ -28,7 +28,7 @@ contract AggregatorSelection {
     constructor(address _gm_storage_address) {
         system_state = "TRAINING";
         current_aggregator = address(
-            0x927507b066B40C5a6b0fd327eFE1c9d33edeE759
+            0x6004D395731f85938177d5B07aCfEc2D5D7ECcB0 //0x927507b066B40C5a6b0fd327eFE1c9d33edeE759
         );
         broker_endpoint = "test_endpoint";
         time_to_aggregate = 0;
