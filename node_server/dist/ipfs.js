@@ -28,7 +28,8 @@ export const pinFile = async () => {
 };
 export const getFileFromIPFS = async (hash) => {
     try {
-        const res = await axios.get(`https://turquoise-zestful-squirrel-651.mypinata.cloud/ipfs/${hash}`);
+        //const res = await axios.get(`https://turquoise-zestful-squirrel-651.mypinata.cloud/ipfs/${hash}`);
+        const res = await axios.get(process.env.IPFS_GATEWAY + `/ipfs/${hash}`);
         // write the file which is in binary format to the local file system
         fs.writeFileSync(`./data/gm.bin`, res.data, { encoding: "binary" });
         console.log("File written to the local file system");

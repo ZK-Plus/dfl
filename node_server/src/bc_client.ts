@@ -3,7 +3,9 @@ import fs from "fs";
 import 'dotenv/config'
 
 // setup client´
-const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/pFowzUSGYob62Q7i2YVsF0LFUX3WiCT2");
+//const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/pFowzUSGYob62Q7i2YVsF0LFUX3WiCT2");
+const web3 = new Web3(process.env.SEPOLIA_RPC_URL);
+
 
 // define smart contract addresses
 const gm_storage_address: string = process.env.GM_STORAGE_ADDRESS as string;

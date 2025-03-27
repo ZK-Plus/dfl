@@ -7,3 +7,9 @@ g++ -I "./lib/eigen-3.4.0" -I"./lib/zmq" -I "/opt/homebrew/Cellar/openssl@3/3.3.
 g++ -o start.exe start.o train-network2.o network2.o functions.o -O3 -DNDEBUG -g -Wall -std=c++17 -lzmq -lssl -lcrypto -pthread
 
 g++ -o start.exe start.o train-network2.o network2.o functions.o -O3 -DNDEBUG -g -Wall -std=c++17 -lssl -lcrypto -lzmq -pthread
+
+
+==============================================================================================================================
+
+g++ -I "./lib/eigen-3.4.0" -I"./lib/zmq" -I "/opt/homebrew/Cellar/openssl@3/3.4.0/include" -I "./lib/zmq/4.3.5_1/include" -I "usr/local" -L./lib/zmq/4.3.5_1/lib -L/opt/homebrew/Cellar/openssl@3/3.4.0/lib -lzmq -lssl -lcrypto -O3 -DNDEBUG -g -Wall -std=c++17 start.o train-network2.o network2.o functions.o -o start.exe
+./start.exe simulate

@@ -1,10 +1,13 @@
 Run the deployment script:
 (Make sure the private key is part of the .env file)
 
-forge script script/Deploy.s.sol --rpc-url https://eth-sepolia.g.alchemy.com/v2/pFowzUSGYob62Q7i2YVsF0LFUX3WiCT2 --broadcast --legacy 
+#forge script script/Deploy.s.sol --rpc-url https://eth-sepolia.g.alchemy.com/v2/pFowzUSGYob62Q7i2YVsF0LFUX3WiCT2 --broadcast --legacy 
+forge script script/Deploy.s.sol --rpc-url https://eth-sepolia.g.alchemy.com/v2/wW26nTnOFYHR-x3-awqwF5FwWaHAiLe5 --broadcast --legacy 
+
 
 Development Calls:
 
 Set broker endpoint:
 source .env
-cast send $AGGREGATOR_ADDRESS "setBrokerEndpoint(string)" “test” --rpc-url https://eth-sepolia.g.alchemy.com/v2/pFowzUSGYob62Q7i2YVsF0LFUX3WiCT2 --private-key $PRIVATE_KEY
+#cast send $AGGREGATOR_ADDRESS "setBrokerEndpoint(string)" “test” --rpc-url https://eth-sepolia.g.alchemy.com/v2/pFowzUSGYob62Q7i2YVsF0LFUX3WiCT2 --private-key $PRIVATE_KEY
+cast send $AGGREGATOR_ADDRESS "setBrokerEndpoint(string)" “test” --rpc-url https://eth-sepolia.g.alchemy.com/v2/wW26nTnOFYHR-x3-awqwF5FwWaHAiLe5 --private-key $PRIVATE_KEY
