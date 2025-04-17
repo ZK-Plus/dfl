@@ -25,7 +25,9 @@ contract AggregatorSelection {
     uint public time_to_select;
     address public gm_storage_address;
 
-    constructor(address _gm_storage_address) {
+    event GMStorageAddressUpdated(address indexed oldAddress, address indexed newAddress);
+
+    constructor() {
         system_state = "TRAINING";
         current_aggregator = address(
             0x6004D395731f85938177d5B07aCfEc2D5D7ECcB0 //0x927507b066B40C5a6b0fd327eFE1c9d33edeE759
@@ -33,7 +35,6 @@ contract AggregatorSelection {
         broker_endpoint = "test_endpoint";
         time_to_aggregate = 0;
         time_to_select = 0;
-        gm_storage_address = _gm_storage_address;
     }
 
     // view functions
@@ -86,6 +87,16 @@ contract AggregatorSelection {
 
     function setBrokerEndpoint(string memory _endpoint) external {
         broker_endpoint = _endpoint;
+    }
+
+    function setGMStorageAddress(address _gm_storage_address) external {
+        // Restrict access to the current aggregator
+        require(
+            msg.sender == current_aggregator,
+            "Caller is not the current aggregator"
+        );
+        emit GMStorageAddressUpdated(gm_storage_address, _gm_storage_address);
+        gm_storage_address = _gm_storage_address;
     }
 
     function triggerAggregatorSelection() external {
