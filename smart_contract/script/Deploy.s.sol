@@ -32,17 +32,19 @@ contract ContractDeploy is Script {
 
         vm.startBroadcast(deployerKey);
 
-        AggregatorSelection aggregatorSelection = new AggregatorSelection(
-            address(0x607B2b2229eba34075fEEEF2E43AC96481133A58)
-        );
-        console2.log(
-            "Deployed AggregatorSelection to",
-            address(aggregatorSelection)
-        );
+        //AggregatorSelection aggregatorSelection = new AggregatorSelection(
+        //    address(0x607B2b2229eba34075fEEEF2E43AC96481133A58)
+        //);
+        //console2.log(
+        //    "Deployed AggregatorSelection to",
+        //    address(aggregatorSelection)
+        //);
 
         GMStorage gmStorage = new GMStorage(
-            address(0xBA874f9c3C3a68F1d196f29DFE14847590559E12),
-            address(aggregatorSelection)
+            //address(0xBA874f9c3C3a68F1d196f29DFE14847590559E12),
+            address(0x3507E0d0a6001031B0b35aB912bd5135fe5EAFA1),
+            ///address(aggregatorSelection)
+            address(0x299e2c907A9f00b9a23E828765d3A8a72fbFac37)
         );
         console2.log("Deployed GMStorage to", address(gmStorage));
 
