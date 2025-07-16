@@ -24,6 +24,11 @@ import {ControlID} from "risc0/groth16/ControlID.sol";
 
 import {EvenNumber} from "../contracts/EvenNumber.sol";
 import {DeviceRegistry} from "../contracts/DeviceRegistry.sol";
+import {AggregatorSelection} from "../contracts/AggregatorSelection.sol";
+//import {GMStorage} from "../../smart_contract/src/GMStorage.sol";
+//import {AggregatorSelection} from "/Users/sonak/arbeit/dfl/dfl/smart_contract/src/AggregatorSelection.sol";
+import {GMStorage} from "/Users/sonak/arbeit/dfl/dfl/smart_contract/src/GMStorage.sol";
+
 
 /// @notice Deployment script for the RISC Zero starter project.
 /// @dev Use the following environment variable to control the deployment:
@@ -44,6 +49,19 @@ contract DeviceRegistryDeploy is Script {
 
         DeviceRegistry deviceRegistry = new DeviceRegistry(verifier);
         console2.log("Deployed DeviceRegistry to", address(deviceRegistry));
+
+        AggregatorSelection aggregatorSelection = new AggregatorSelection(
+        );
+        console2.log(
+            "Deployed AggregatorSelection to",
+            address(aggregatorSelection)
+        );
+        // needs deviceRegistry and AggrigatorSelection
+        GMStorage gmStorage = new GMStorage(
+            address(deviceRegistry),
+            address(aggregatorSelection)
+        );
+        console2.log("Deployed GMStorage to", address(gmStorage));
 
         vm.stopBroadcast();
     }
