@@ -124,3 +124,11 @@ To run the server:
 ```
 npm run start
 ```
+
+# remote attestation
+
+Tests your zkVM program.
+
+```
+cargo test
+```

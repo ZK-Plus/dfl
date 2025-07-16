@@ -1,0 +1,1 @@
+/Users/sonak/arbeit/dfl/dfl/remote_attestation/target/riscv-guest/methods/guests/riscv32im-risc0-zkvm-elf/release/verify-ar: /Users/sonak/arbeit/dfl/dfl/remote_attestation/methods/guest/src/bin/verify_ar.rs
