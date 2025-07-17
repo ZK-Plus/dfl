@@ -20,7 +20,7 @@ pragma solidity ^0.8.20;
 
 library Elf {
     string public constant IS_EVEN_PATH =
-        "/Users/sonak/arbeit/dfl/dfl/remote_attestation/target/riscv-guest/methods/guests/riscv32im-risc0-zkvm-elf/release/is-even";
+        "/Users/sonak/arbeit/dfl/dfl/remote_attestation/target/riscv-guest/methods/guests/riscv32im-risc0-zkvm-elf/release/is-even.bin";
     string public constant VERIFY_AR_PATH =
-        "/Users/sonak/arbeit/dfl/dfl/remote_attestation/target/riscv-guest/methods/guests/riscv32im-risc0-zkvm-elf/release/verify-ar";
+        "/Users/sonak/arbeit/dfl/dfl/remote_attestation/target/riscv-guest/methods/guests/riscv32im-risc0-zkvm-elf/release/verify-ar.bin";
 }
