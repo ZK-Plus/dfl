@@ -6,20 +6,43 @@ extern crate alloc;
 use alloy_sol_types::SolValue;
 use alloc::vec::Vec;
 use alloc::format;
+use alloc::string::String;
 use risc0_zkvm::guest::env;
 use serde::{Deserialize, Serialize};
-use bincode;
-use x509_parser::prelude::*;
-use x509_parser::certificate::X509Certificate;
-use sha2::{Sha384, Digest};
-use rsa::pss::{VerifyingKey as RsaVerifyingKey};
-use rsa::pkcs1::DecodeRsaPublicKey;
-use rsa::signature::Verifier as RsaVerifier;
-use rsa::signature::DigestVerifier;
-use core::convert::TryFrom;
+//use bincode;
+//use x509_parser::prelude::*;
+//use x509_parser::certificate::X509Certificate;
+//use sha2::{Sha384, Digest};
+//use rsa::pss::{VerifyingKey as RsaVerifyingKey};
+//use rsa::pkcs1::DecodeRsaPublicKey;
+//use rsa::signature::Verifier as RsaVerifier;
+//use rsa::signature::DigestVerifier;
+//use core::convert::TryFrom;
+use serde_json;
+//use tdx_quote::
 
 risc0_zkvm::guest::entry!(main);
 
+#[derive(Serialize, Deserialize, Debug)]
+struct TdReportBody {
+    tee_tcb_svn: String,
+    mr_seam: String,
+    mr_signer_seam: String,
+    seam_attributes: String,
+    td_attributes: String,
+    xfam: String,
+    mr_td: String,
+    mr_config_id: String,
+    mr_owner: String,
+    mr_owner_config: String,
+    rt_mr0: String,
+    rt_mr1: String,
+    rt_mr2: String,
+    rt_mr3: String,
+    report_data: String,
+}
+
+/* This is for ARMs Remote Attestation.
 #[derive(Serialize, Deserialize)]
 struct InputData {
     vcek: Vec<u8>,
@@ -52,7 +75,7 @@ fn verify_rsa_signature(
     let result = verifying_key.verify(tbs_cert, &signature_value);
 
     result.is_ok()
-}
+}*/
 
 fn main() {
     let start = env::cycle_count();
@@ -61,6 +84,21 @@ fn main() {
     // env::stdin().read_to_end(&mut serialized_data).unwrap();
     let serialized_data: Vec<u8> = env::read();
 
+    // Deserialize the input data from JSON
+    let report: TdReportBody = match serde_json::from_slice(&serialized_data) {
+        Ok(data) => data,
+        Err(err) => {
+            env::log(format!("Deserialization from JSON failed: {:?}", err).as_str());
+            env::commit_slice(&[0u8; 32]); // Verification failed
+            return;
+        }
+    };
+    env::log(format!("TD Report Body deserialized successfully: {:?}", report).as_str());
+
+    // For now, we'll just commit a success value.
+    let is_valid = true;
+
+    /* This is for ARMs Remote Attestation.
     // Deserialize the input data
     let input_data: InputData = match bincode::deserialize(&serialized_data) {
         Ok(data) => data,
@@ -128,7 +166,7 @@ fn main() {
         env::log("Verification of VCEK successful.");
     } else {
         env::log("Verification of VCEK failed.");
-    }
+    }*/
 
 
     // Write the result to the journal
