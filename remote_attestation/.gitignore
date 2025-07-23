@@ -1,0 +1,8 @@
+# Rust build artifacts
+target/
+
+# Foundry build artifacts
+cache/
+out/
+broadcast/
+deployments/
