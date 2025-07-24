@@ -6,9 +6,9 @@ extern crate alloc;
 use alloy_sol_types::SolValue;
 use alloc::vec::Vec;
 use alloc::format;
-use alloc::string::String;
+//use alloc::string::String;
 use risc0_zkvm::guest::env;
-use serde::{Deserialize, Serialize};
+//use serde::{Deserialize, Serialize};
 //use bincode;
 //use x509_parser::prelude::*;
 //use x509_parser::certificate::X509Certificate;
@@ -18,13 +18,14 @@ use serde::{Deserialize, Serialize};
 //use rsa::signature::Verifier as RsaVerifier;
 //use rsa::signature::DigestVerifier;
 //use core::convert::TryFrom;
-use serde_json;
-//use tdx_quote::
+//use serde_json;
+use tdx_quote::Quote;
 
 risc0_zkvm::guest::entry!(main);
 
+ /* If the body is needed
 #[derive(Serialize, Deserialize, Debug)]
-struct TdReportBody {
+struct TDXBody {
     tee_tcb_svn: String,
     mr_seam: String,
     mr_signer_seam: String,
@@ -40,7 +41,7 @@ struct TdReportBody {
     rt_mr2: String,
     rt_mr3: String,
     report_data: String,
-}
+}*/
 
 /* This is for ARMs Remote Attestation.
 #[derive(Serialize, Deserialize)]
@@ -82,10 +83,13 @@ fn main() {
     // Read the serialized input data
     // let mut serialized_data = Vec::<u8>::new();
     // env::stdin().read_to_end(&mut serialized_data).unwrap();
-    let serialized_data: Vec<u8> = env::read();
+    //let serialized_data: Vec<u8> = env::read();//rtxbody
+    let quote_bytes: Vec<u8> = env::read();
+    env::log(&format!("Received quote_bytes with length: {}", quote_bytes.len()));
 
+    /* If the body is needed
     // Deserialize the input data from JSON
-    let report: TdReportBody = match serde_json::from_slice(&serialized_data) {
+    let report: TDXBody = match serde_json::from_slice(&serialized_data) {
         Ok(data) => data,
         Err(err) => {
             env::log(format!("Deserialization from JSON failed: {:?}", err).as_str());
@@ -93,10 +97,34 @@ fn main() {
             return;
         }
     };
-    env::log(format!("TD Report Body deserialized successfully: {:?}", report).as_str());
+    env::log(format!("TD Report Body deserialized successfully: {:?}", report).as_str());*/
 
     // For now, we'll just commit a success value.
-    let is_valid = true;
+    //let is_valid = true;
+
+    // Verify the quote using the tdx_quote library.
+    let is_valid = match Quote::from_bytes(&quote_bytes) {
+        Ok(quote) => {
+            env::log("TDX quote parsed successfully.");
+            // The quote is verified using the embedded PCK certificate chain.
+            match quote.verify() {
+                Ok(_pck) => {
+                    env::log("TDX attestation verification successful.");
+                    // You can optionally inspect the verified report data here.
+                    // For example: env::log(format!("Verified report data: {:?}", &quote.body.reportdata).as_str());
+                    true
+                }
+                Err(e) => {
+                    env::log(&format!("TDX attestation verification failed: {:?}", e));
+                    false
+                }
+            }
+        }
+        Err(e) => {
+            env::log(&format!("TDX quote parsing failed: {:?}", e));
+            false
+        }
+    };
 
     /* This is for ARMs Remote Attestation.
     // Deserialize the input data

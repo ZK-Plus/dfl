@@ -24,6 +24,7 @@ use ethers::prelude::*;
 use methods::VERIFY_AR_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
+use hex;
 
 use std::fs;
 //use pem::parse;
@@ -158,9 +159,13 @@ fn main() -> Result<()> {
     log::info!("Serialized data length: {}", serialized_data.len());
     */
 
-    let attestation_report_content = fs::read("./apps/data/phala_attestation_report.json").expect("Unable to read phala_attestation_report.json");
+    //let attestation_report_content = fs::read("./apps/data/phala_attestation_report.json").expect("Unable to read phala_attestation_report.json");
 
-    let env = ExecutorEnv::builder().write(&attestation_report_content)?.build()?;
+    let attestation_report_quote_hex = fs::read_to_string("./apps/data/phala_tdx_quote").expect("Unable to read phala_tdx_quote");
+    let attestation_report_quote = hex::decode(attestation_report_quote_hex.trim()).expect("Failed to decode hex string");
+
+    let env = ExecutorEnv::builder().write(&attestation_report_quote)?.build()?;
+    //let env = ExecutorEnv::builder().write(&attestation_report_content)?.build()?; //TDX Body
     //let env = ExecutorEnv::builder().write(&serialized_data)?.build()?; // arm
     ////let env = ExecutorEnv::builder().write_slice(&input).build()?;
 
