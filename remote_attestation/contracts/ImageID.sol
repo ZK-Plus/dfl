@@ -20,5 +20,5 @@ pragma solidity ^0.8.20;
 
 library ImageID {
     bytes32 public constant IS_EVEN_ID = bytes32(0x36b329656652848120f15432d4a070c34fa8bcd1a84b37b39c3ca542d8dcac9e);
-    bytes32 public constant VERIFY_AR_ID = bytes32(0x4b7854902ee246b7dadcf112127cc886c3102f06bc482077c77cf06127c7ba36);
+    bytes32 public constant VERIFY_AR_ID = bytes32(0x60ba9cf29f25f6f924b23a3d9bcfba05c406f6f10b43e9b08eae7c34495f87da);
 }
