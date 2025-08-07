@@ -1,0 +1,20 @@
+---
+services:
+  server:
+    image: debian:latest
+    container_name: dfl-server
+    volumes:
+      - ../linux_out:/mnt/dfl
+      - ../neural_network/data:/mnt/dfl/data
+      - ./init.sh:/tmp/init.sh
+    command: bash -c "sh /tmp/init.sh && /mnt/dfl/start.exe server"
+  client:
+    image: debian:latest
+    container_name: dfl-client
+    volumes:
+      - ../linux_out:/mnt/dfl
+      - ../neural_network/data:/mnt/dfl/data
+      - ./init.sh:/tmp/init.sh
+    command: bash -c "sh /tmp/init.sh && /mnt/dfl/start.exe client server 0"
+    depends_on:
+      - server
