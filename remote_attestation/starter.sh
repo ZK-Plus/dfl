@@ -11,9 +11,9 @@ export ETH_WALLET_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efc
 
 echo "Wallet private key wurde gesetzt." 
 
-cargo clean
+#cargo clean
 
-cargo build
+#cargo build
 
 export rpc_url=http://localhost:8545
 
@@ -32,6 +32,8 @@ export ADDRESS_2=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 
 export PRIVATE_KEY_1=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
+echo "========= node server environment variables ========="
+
 echo "REGISTRY_ADDRESS= $DEVICE_REGISTRY_ADDRESS" 
 
 echo "AGGREGATOR_ADDRESS= $AGGREGATOR_SELECTION_ADDRESS" 
@@ -43,6 +45,8 @@ echo "ACCOUNT_ADDRESS= $ADDRESS_1"
 echo "PRIVATE_KEY= $PRIVATE_KEY_1"
 
 echo "SEPOLIA_RPC_URL= $rpc_url"
+
+echo "===================================================="
 
 cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_1 $AGGREGATOR_SELECTION_ADDRESS "setGMStorageAddress(address)" $GMSTORAGE
 
@@ -56,5 +60,5 @@ echo "GMStorage Addresse wurde in AggregatorSelection gesetzt"
 
 #cast call --rpc-url http://localhost:8545 $CONTRACT_ADDRESS "isAuthorized(address)" $ADDRESS_2
 
-RISC0_DEV_MODE=1 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_1 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
+##RISC0_DEV_MODE=1 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_1 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
 #RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_1 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS

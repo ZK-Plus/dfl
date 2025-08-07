@@ -4,8 +4,10 @@ import FormData from "form-data";
 import { setGlobalModel, getCurrentGM } from "./bc_client.js";
 export const pinFile = async () => {
     try {
+        console.log("Starting IPFS upload ...");
         const formData = new FormData();
         const file = fs.createReadStream("./data/backup.bin");
+        //const file = fs.createReadStream("./data/test.txt");
         formData.append("file", file);
         const pinataMetadata = JSON.stringify({
             name: "File name",
@@ -20,6 +22,7 @@ export const pinFile = async () => {
                 Authorization: `Bearer ${process.env.PINATA_JWT}`,
             },
         });
+        console.log("IPFS Uploaded.");
         return res.data.IpfsHash;
     }
     catch (error) {
