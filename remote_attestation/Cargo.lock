@@ -796,6 +796,7 @@ dependencies = [
  "clap",
  "env_logger",
  "ethers",
+ "hex",
  "log",
  "methods",
  "pem",

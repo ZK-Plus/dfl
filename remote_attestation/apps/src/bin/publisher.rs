@@ -24,12 +24,13 @@ use ethers::prelude::*;
 use methods::VERIFY_AR_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
+use hex;
 
 use std::fs;
-use pem::parse;
-use serde::{Serialize, Deserialize};
+//use pem::parse;
+//use serde::{Serialize, Deserialize};
 //use tracing_subscriber;
-use std::env;
+//use std::env;
 
 // `IEvenNumber` interface automatically generated via the alloy `sol!` macro.
 sol! {
@@ -108,13 +109,14 @@ struct Args {
     contract: String,
 }
 
+/* This is for ARMs Remote Attestation.
 /// Input data for the zkVM proof request.
 #[derive(Serialize, Deserialize)]
 struct InputData {
     vcek: Vec<u8>,
     cert_chain: Vec<u8>,
     public_key: Vec<u8>,
-}
+}*/
 
 fn main() -> Result<()> {
     env_logger::init();
@@ -130,6 +132,7 @@ fn main() -> Result<()> {
     )?;
 
     // Read and parse the PEM files
+    /* This is for ARMs Remote Attestation.
     let vcek_content = fs::read("./apps/data/vcek.pem").expect("Unable to read PEM file 1");
     let vcek = parse(&vcek_content).expect("Unable to parse PEM file 1");
 
@@ -138,7 +141,7 @@ fn main() -> Result<()> {
 
     let public_key_content = fs::read("./apps/data/public_key.pem").expect("Unable to read PEM file 3");
     let public_key = parse(&public_key_content).expect("Unable to parse PEM file 3");
-
+    
     //print length of ca cert
     log::info!("CA cert length: {}", cert_chain.contents.len());
     log::info!("VCEK cert length: {}", vcek.contents.len());
@@ -154,10 +157,17 @@ fn main() -> Result<()> {
     
     // Debug: Print serialized data length
     log::info!("Serialized data length: {}", serialized_data.len());
+    */
 
+    //let attestation_report_content = fs::read("./apps/data/phala_attestation_report.json").expect("Unable to read phala_attestation_report.json");
 
-    let env = ExecutorEnv::builder().write(&serialized_data)?.build()?;
-    //let env = ExecutorEnv::builder().write_slice(&input).build()?;
+    let attestation_report_quote_hex = fs::read_to_string("./apps/data/phala_tdx_quote").expect("Unable to read phala_tdx_quote");
+    let attestation_report_quote = hex::decode(attestation_report_quote_hex.trim()).expect("Failed to decode hex string");
+
+    let env = ExecutorEnv::builder().write(&attestation_report_quote)?.build()?;
+    //let env = ExecutorEnv::builder().write(&attestation_report_content)?.build()?; //TDX Body
+    //let env = ExecutorEnv::builder().write(&serialized_data)?.build()?; // arm
+    ////let env = ExecutorEnv::builder().write_slice(&input).build()?;
 
     log::info!("Executing proof request...");
 

@@ -3,8 +3,9 @@ import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import child_process from 'child_process';
-import { getCurrentState, setContribution } from "./bc_client.js";
-import { getCurrentModel } from "./ipfs.js";
+import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection} from "./bc_client.js";
+import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
+
 const trainingProcess = child_process.execFile;
 // Define __dirname manually
 const __filename = fileURLToPath(import.meta.url);
@@ -21,7 +22,9 @@ const stateMachine = async () => {
             if (state[1] === process.env.ACCOUNT_ADDRESS) {
                 console.log("I am the aggregator");
                 // open socket
+                console.log("Starting the zerompq server ...");
                 trainingProcess(exePath, ["server"], function (err, data) {
+                    
                     if (err) {
                         console.error("Error executing training process:", err);
                         return;
@@ -73,11 +76,13 @@ let newAddresses = ["0xAB28fB54fA7488fAeb2De0d54F3eB660fE7AE983", "0x967d3cf74E8
 //   callArray.push(deviceAddress);
 // }
 //console.log(newAddresses.length);
-for (let i = 0; i < 15; i++) {
-    console.log('Round: ' + i);
-    await setContribution(newAddresses.slice(0, i + 1));
-    //console.log(newAddresses.slice(0, i + 1).length);
-}
+
+////for (let i = 0; i < 15; i++) {
+////    console.log('Round: ' + i);
+////    await setContribution(newAddresses.slice(0, i + 1));
+////    //console.log(newAddresses.slice(0, i + 1).length);
+////}
+
 //setContribution(["0x927507b066B40C5a6b0fd327eFE1c9d33edeE759", "0x927507b066B40C5a6b0fd327eFE1c9d33edeE759", "0x927507b066B40C5a6b0fd327eFE1c9d33edeE759", "0x927507b066B40C5a6b0fd327eFE1c9d33edeE759", "0x927507b066B40C5a6b0fd327eFE1c9d33edeE759"]);
 // getTopContributor().then((result) => {
 //   console.log(result);
@@ -88,3 +93,17 @@ for (let i = 0; i < 15; i++) {
 // getCurrentState().then((result) => {
 //   console.log(result);
 // });
+
+// Meine Tests
+stateMachine();
+//updateGM();
+////getCurrentModel();
+
+////await getCurrentModel();
+//trainingProcess(exePath, ["train"], function (err, data) {
+//    if (err) {
+//        console.error("Error executing training process:", err);
+//        return;
+//    }
+//    console.log(data.toString());
+//});
