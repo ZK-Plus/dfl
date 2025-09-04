@@ -4,5 +4,9 @@ out = "out"
 libs = ["lib"]
 test = "tests"
 ffi = true
+remappings = [
+  "smart_contract/=../smart_contract/src/"
+]
+allow_paths = ["../smart_contract/src"]
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

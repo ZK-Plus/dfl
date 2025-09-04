@@ -25,9 +25,10 @@ import {ControlID} from "risc0/groth16/ControlID.sol";
 import {EvenNumber} from "../contracts/EvenNumber.sol";
 import {DeviceRegistry} from "../contracts/DeviceRegistry.sol";
 import {AggregatorSelection} from "../contracts/AggregatorSelection.sol";
-//import {GMStorage} from "../../smart_contract/src/GMStorage.sol";
+import {GMStorage} from "smart_contract/GMStorage.sol";
 //import {AggregatorSelection} from "/Users/sonak/arbeit/dfl/dfl/smart_contract/src/AggregatorSelection.sol";
-import {GMStorage} from "/Users/sonak/arbeit/dfl/dfl/smart_contract/src/GMStorage.sol";
+//import {GMStorage} from "/Users/sonak/arbeit/dfl/dfl/smart_contract/src/GMStorage.sol";
+
 
 
 /// @notice Deployment script for the RISC Zero starter project.

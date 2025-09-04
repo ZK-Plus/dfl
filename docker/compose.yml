@@ -1,20 +1,55 @@
 ---
 services:
   server:
-    image: debian:latest
-    container_name: dfl-server
-    volumes:
-      - ../linux_out:/mnt/dfl
-      - ../neural_network/data:/mnt/dfl/data
-      - ./init.sh:/tmp/init.sh
-    command: bash -c "sh /tmp/init.sh && /mnt/dfl/start.exe server"
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: sonak53/dfl-server-img:latest
+    platform: linux/amd64
+    container_name: dfl-worker-0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      API_KEY: ${API_KEY}
+      API_SECRET: ${API_SECRET}
+      PINATA_JWT: ${PINATA_JWT}
+      IPFS_GATEWAY: ${IPFS_GATEWAY}
+      REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
+      AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
+      GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
+      SEPOLIA_RPC_URL: ${RPC_URL}
+      ACCOUNT_ADDRESS: ${W0_ACCOUNT_ADDRESS}
+      PRIVATE_KEY: ${W0_PRIVATE_KEY}
+      DEVICE_ID: "0"
+    #command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
+    #    cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
+    #    cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
+    #    cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte"]
+  #  command: ["/opt/dfl/start.exe","server"]
+
   client:
-    image: debian:latest
-    container_name: dfl-client
-    volumes:
-      - ../linux_out:/mnt/dfl
-      - ../neural_network/data:/mnt/dfl/data
-      - ./init.sh:/tmp/init.sh
-    command: bash -c "sh /tmp/init.sh && /mnt/dfl/start.exe client server 0"
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: sonak53/dfl-server-img:latest
+    platform: linux/amd64
+    container_name: dfl-worker-1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - server
+    environment:
+      API_KEY: ${API_KEY}
+      API_SECRET: ${API_SECRET}
+      PINATA_JWT: ${PINATA_JWT}
+      IPFS_GATEWAY: ${IPFS_GATEWAY}
+      REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
+      AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
+      GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
+      SEPOLIA_RPC_URL: ${RPC_URL}
+      ACCOUNT_ADDRESS: ${W1_ACCOUNT_ADDRESS}
+      PRIVATE_KEY: ${W1_PRIVATE_KEY}
+      DEVICE_ID: "1"
+    #command: ["/opt/dfl/node_server/npm", "run", "start"]
+    #command: ["npm","run","start"]
+

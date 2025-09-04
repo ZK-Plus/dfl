@@ -21,8 +21,10 @@ contract GMStorage {
         address _device_registry_address,
         address _aggregator_selection_address
     ) {
-        globalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
-        backupGlobalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
+        //globalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
+        globalModel = "bafybeigjcypobmn3zna5tlaohmfydpdb7tgzges2mrh7l2er42uja4zj6a";
+        //backupGlobalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
+        backupGlobalModel = "bafybeigjcypobmn3zna5tlaohmfydpdb7tgzges2mrh7l2er42uja4zj6a";
         device_registry_address = _device_registry_address;
         aggregator_selection_address = _aggregator_selection_address;
     }
