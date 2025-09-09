@@ -57,10 +57,14 @@ contract DeviceRegistryDeploy is Script {
             "Deployed AggregatorSelection to",
             address(aggregatorSelection)
         );
+
+        string memory initial_gm_cid = vm.envString("INITIAL_GM_CID");
+
         // needs deviceRegistry and AggrigatorSelection
         GMStorage gmStorage = new GMStorage(
             address(deviceRegistry),
-            address(aggregatorSelection)
+            address(aggregatorSelection),
+            initial_gm_cid
         );
         console2.log("Deployed GMStorage to", address(gmStorage));
 

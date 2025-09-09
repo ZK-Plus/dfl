@@ -19,12 +19,15 @@ contract GMStorage {
 
     constructor(
         address _device_registry_address,
-        address _aggregator_selection_address
+        address _aggregator_selection_address,
+        string memory _initial_GM_CID
     ) {
         //globalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
-        globalModel = "bafybeigjcypobmn3zna5tlaohmfydpdb7tgzges2mrh7l2er42uja4zj6a";
+        //globalModel = "bafybeigjcypobmn3zna5tlaohmfydpdb7tgzges2mrh7l2er42uja4zj6a";
+        globalModel = _initialGM;
         //backupGlobalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
-        backupGlobalModel = "bafybeigjcypobmn3zna5tlaohmfydpdb7tgzges2mrh7l2er42uja4zj6a";
+        //backupGlobalModel = "bafybeigjcypobmn3zna5tlaohmfydpdb7tgzges2mrh7l2er42uja4zj6a";
+        backupGlobalModel = _initial_GM_CID;
         device_registry_address = _device_registry_address;
         aggregator_selection_address = _aggregator_selection_address;
     }
