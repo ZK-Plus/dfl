@@ -1,0 +1,24 @@
+FROM ghcr.io/foundry-rs/foundry
+
+# als root arbeiten, um Rechte zu setzen
+USER root
+WORKDIR /dfl
+
+# Quellen kopieren und Owner setzen
+COPY --chown=root:root smart_contract ./smart_contract
+COPY --chown=root:root remote_attestation ./remote_attestation
+
+RUN apt-get update && \
+    apt-get install -y jq
+
+# Schreibrechte für Foundry-Outputs und ggf. Ownership an 'foundry' übertragen
+RUN mkdir -p /dfl/remote_attestation/out \
+ && chmod -R a+rwX /dfl/remote_attestation \
+ && if id -u foundry >/dev/null 2>&1; then chown -R foundry:foundry /dfl/remote_attestation; fi
+
+# optional: ohne root laufen lassen (falls User existiert)
+# USER foundry
+
+WORKDIR /dfl/remote_attestation
+
+
