@@ -1,4 +1,10 @@
-Create a .env file in the same folder as the compose file with the following values and replace the dummy [pinata](https://pinata.cloud/) credentials with your own. The following valuees do not have to be changed if you want to use [Anvil](https://getfoundry.sh/anvil/overview/) a fast local Ethereum development node.
+# Instructions
+
+
+
+Create a .env file in the same folder as the compose file with the following values and replace the dummy [pinata](https://pinata.cloud/) credentials with your own. Upload the initial global model in IPFS usind the Add function in FILES from [pinata](https://pinata.cloud/). Choose FILE UPLOAD and the Initial_GM file in this folder, then repace the INITIAL_GM_CID with your new CID. 
+
+The following values do not have to be changed if you want to use [Anvil](https://getfoundry.sh/anvil/overview/) a fast local Ethereum development node.
 
 ```
 # Pinata credentials
@@ -6,6 +12,7 @@ API_KEY= 03xxxxx...
 API_SECRET= 089xxxx...
 PINATA_JWT=eyJhbxxxxxx...
 IPFS_GATEWAY= https://xxxxx.....xxxxxx.mypinata.cloud
+INITIAL_GM_CID=bafxxxxx...
 
 # Anvil deployed contract addresses
 REGISTRY_ADDRESS= 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
