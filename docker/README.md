@@ -2,10 +2,11 @@ Create a .env file in the same folder as the compose file with the following val
 
 ```
 # Pinata credentials
-API_KEY=$${\color{blue}03xxxxx}$$
-API_SECRET=$${\color{blue}089xxxx}$$
+API_KEY= ${\color{blue}03xxxxx}$
+API_SECRET= $${\color{blue}089xxxx}$$
 PINATA_JWT=$${\color{blue}eyJhbxxxxxx}$$
-IPFS_GATEWAY=$${\color{blue}https://xxxxxxxxxxx.mypinata.cloud}$$
+IPFS_GATEWAY= 
+$${\color{blue}https://xxxxxxxxxxx.mypinata.cloud}$$
 
 # Anvil deployed contract addresses
 REGISTRY_ADDRESS= 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
