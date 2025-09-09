@@ -4,13 +4,13 @@ FROM node:20-slim
 
 WORKDIR /dfl
 
-#COPY cloud_setup/ansible/config ./config
+COPY cloud_setup/ansible/config ./config
 
 COPY node_server ./node_server
 
 #COPY neural_network/data/lm.bin ./node_server/data/lm.bin
 
-COPY neural_network/data ./node_server/data
+#COPY neural_network/data ./node_server/data
 
 RUN apt-get update && \
     apt-get install -y libzmq3-dev && \
@@ -28,5 +28,5 @@ WORKDIR /dfl/node_server
 
 COPY linux_out/start.exe ./start.exe
 
-CMD ["node", "dist/server.js"]
+#CMD ["node", "dist/server.js"]
 
