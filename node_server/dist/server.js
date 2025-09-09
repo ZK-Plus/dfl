@@ -2,12 +2,13 @@
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
-//import child_process from 'child_process';
-import child_process from 'node:child_process';
+import child_process from 'child_process';
+import util from 'util';
+//import child_process from 'node:child_process';
 import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection} from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
 
-const trainingProcess = child_process.execFile;
+const trainingProcess = util.promisify(child_process.execFile);
 // Define __dirname manually
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +18,7 @@ let currentState = "";
 let aggregatorProc = null;
 const stateMachine = async () => {
     let state = await getCurrentState();
-    console.log(state);
+    //onsole.log(state);
     switch (state["0"]) {
         case "TRAINING":
             // check if this node is the current aggregator
@@ -36,45 +37,80 @@ const stateMachine = async () => {
             }*/
             if (state[1] === process.env.ACCOUNT_ADDRESS) {
                 console.log("I am the aggregator");
-                if (!aggregatorProc || aggregatorProc.exitCode !== null) {
+                //if (!aggregatorProc || aggregatorProc.exitCode !== null) {
                     console.log("Starting the zerompq server ...");
-                    aggregatorProc = trainingProcess(exePath, ["server"], (err, data) => {
-                        if (err) {
-                            console.error("Error executing training process:", err);
-                            return;
+                    try {
+                        const { stdout, stderr } = await trainingProcess(exePath, ["server"]);
+                        console.log('stdout:', stdout);
+                        if (stderr) {
+                            console.error('stderr:', stderr);
                         }
-                        console.log(data.toString());
-                    });
-                    aggregatorProc.on('exit', (code, sig) => {
-                        console.log(`Aggregator process exited code=${code} sig=${sig}`);
-                    });
-                } else {
-                    console.log("Aggregator server already running – skip restart.");
-                }
+                        console.log("Cannary-1");
+                        setCurrentState("AGGREGATING");
+                        //await new Promise((resolve) => setTimeout(resolve, 30000)); // wait for 30 seconds to receive models
+                        console.log("Cannary-2");
+                    } catch (e) {
+                        console.error("Error during starting the aggregator server:", e);
+                        return;
+                    }
+                    /*try {
+                        const { stdout, stderr } = await trainingProcess(exePath, ["server"]);
+                        console.log('stdout:', stdout);
+                        if (stderr) {
+                            console.error('stderr:', stderr);
+                        }
+                        console.log("Cannary-2");
+                        //await new Promise((resolve) => setTimeout(resolve, 30000)); // wait for 30 seconds to receive models
+                        //console.log("Cannary-2");
+                    } catch (e) {
+                        console.error("Error during starting the aggregator server:", e);
+                        return;
+                    }*/
+                    console.log("Cannary-3");
+                    //aggregatorProc.on('exit', (code, sig) => {
+                    //    console.log(`Aggregator process exited code=${code} sig=${sig}`);
+                    //});
+                //} else {
+                //    console.log("Aggregator server already running – skip restart.");
+                //}
             }
             else {
                 console.log("I am not the aggregator");
                 //fetch global model from IPFS
+                console.log("Fetching the global model from IPFS ...");
                 await getCurrentModel();
                 // execute the local training process
-                trainingProcess(exePath, ["train"], function (err, data) {
-                    if (err) {
-                        console.error("Error executing training process:", err);
-                        return;
+                console.log("Starting local training ...");
+                try {
+                    const { stdout, stderr } = await trainingProcess(exePath, ["train"]);
+                    console.log('stdout:', stdout);
+                    if (stderr) {
+                        console.error('stderr:', stderr);
                     }
-                    console.log(data.toString());
-                });
+                } catch (e) {
+                    console.error("Error during local training:", e);
+                    return;
+                }
+                console.log("Local training complete.");
                 // transfer the local model to the aggregator by calling another executable
-                trainingProcess(exePath, ["transfer", String(state["2"]), String(deviceID)], function (err, data) {
-                    if (err) {
-                        console.error("Error executing training process:", err);
-                        return;
+                console.log("Starting the zerompq client ...");
+                try {
+                    const { stdout, stderr } = await trainingProcess(exePath, ["client", String(state["1"]), String(deviceID)]);
+                    console.log('stdout:', stdout);
+                    if (stderr) {
+                        console.error('stderr:', stderr);
                     }
-                    console.log(data.toString());
-                });
+                } catch (e) {
+                    console.error("Error during model transfer:", e);
+                    return;
+                }
+                console.log("Transfer complete. Send local model to aggregator.");
+                console.log("Shutting down client.");
+                process.exit(0);          
             }
             break;
         case "AGGREGATING":
+            console.log("Aggregating ...");
             currentState = "AGGREGATING";
             break;
         case "UPDATING":
@@ -86,22 +122,22 @@ const stateMachine = async () => {
 };
 
 // Simple Polling-Service
-const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '15000', 10);
+//const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '60000', 10);
 
 async function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
 }
 
 async function runService() {
-    console.log('Service started. Poll interval =', POLL_INTERVAL_MS, 'ms');
-    while (true) {
+//    console.log('Service started. Poll interval =', POLL_INTERVAL_MS, 'ms');
+//    while (true) {
         try {
             await stateMachine();
         } catch (e) {
             console.error('stateMachine error:', e);
         }
-        await sleep(POLL_INTERVAL_MS);
-    }
+//        await sleep(POLL_INTERVAL_MS);
+//    }
 }
 
 runService();
