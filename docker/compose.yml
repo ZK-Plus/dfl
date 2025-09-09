@@ -51,6 +51,21 @@ services:
       ACCOUNT_ADDRESS: ${W0_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W0_PRIVATE_KEY}
       DEVICE_ID: ${W0_DEVICE_ID}
+    #volumes:
+    #  - .cloud_setup/ansible/config/training_data/train-images-0.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/training_data/train-labels-0.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-images.idx3-ubyte:/dfl/node_server/data/t10k-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-labels.idx1-ubyte:/dfl/node_server/data/t10k-labels.idx1-ubyte
+    command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
+        cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
+        cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
+        cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+        exec node /dfl/node_server/dist/server.js"]
+      #command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
+    #    cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
+    #    cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
+    #    cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte"]
+  #  command: ["/opt/dfl/start.exe","server"]
 
   VM-1:
     build:
@@ -74,6 +89,16 @@ services:
       ACCOUNT_ADDRESS: ${W1_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W1_PRIVATE_KEY}
       DEVICE_ID: ${W1_DEVICE_ID}
+    #volumes:
+    #  - .cloud_setup/ansible/config/training_data/train-images-1.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/training_data/train-labels-1.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-images.idx3-ubyte:/dfl/node_server/data/t10k-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-labels.idx1-ubyte:/dfl/node_server/data/t10k-labels.idx1-ubyte
+    command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-1.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
+        cp /dfl/config/training_data/train-labels-1.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
+        cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
+        cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+        exec node /dfl/node_server/dist/server.js"]
 
   VM-2:
     build:
@@ -97,6 +122,16 @@ services:
       ACCOUNT_ADDRESS: ${W2_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W2_PRIVATE_KEY}
       DEVICE_ID: ${W2_DEVICE_ID}
+    #volumes:
+    #  - .cloud_setup/ansible/config/training_data/train-images-2.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/training_data/train-labels-2.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-images.idx3-ubyte:/dfl/node_server/data/t10k-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-labels.idx1-ubyte:/dfl/node_server/data/t10k-labels.idx1-ubyte
+    command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-2.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
+      cp /dfl/config/training_data/train-labels-2.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
+      cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
+      cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+      exec node /dfl/node_server/dist/server.js"]
 
   VM-3:
     build:
@@ -120,6 +155,18 @@ services:
       ACCOUNT_ADDRESS: ${W3_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W3_PRIVATE_KEY}
       DEVICE_ID: ${W3_DEVICE_ID}
+    #volumes:
+    #  - .cloud_setup/ansible/config/training_data/train-images-3.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/training_data/train-labels-3.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-images.idx3-ubyte:/dfl/node_server/data/t10k-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-labels.idx1-ubyte:/dfl/node_server/data/t10k-labels.idx1-ubyte
+    command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-3.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
+        cp /dfl/config/training_data/train-labels-3.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
+        cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
+        cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+        exec node /dfl/node_server/dist/server.js"]
+
+
 
     #command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
     #    cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
