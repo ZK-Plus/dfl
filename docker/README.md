@@ -2,7 +2,7 @@ Create a .env file in the same folder as the compose file with the following val
 
 ```
 # Pinata credentials
-API_KEY= ${\color{blue}03xxxxx}$
+API_KEY= $\color{blue}03xxxxx$
 API_SECRET= $${\color{blue}089xxxx}$$
 PINATA_JWT=$${\color{blue}eyJhbxxxxxx}$$
 IPFS_GATEWAY= 
