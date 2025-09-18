@@ -24,7 +24,7 @@ contract GMStorage {
     ) {
         //globalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
         //globalModel = "bafybeigjcypobmn3zna5tlaohmfydpdb7tgzges2mrh7l2er42uja4zj6a";
-        globalModel = _initialGM;
+        globalModel = _initial_GM_CID;
         //backupGlobalModel = "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8";
         //backupGlobalModel = "bafybeigjcypobmn3zna5tlaohmfydpdb7tgzges2mrh7l2er42uja4zj6a";
         backupGlobalModel = _initial_GM_CID;

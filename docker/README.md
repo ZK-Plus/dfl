@@ -2,17 +2,14 @@
 
 
 
-Create a .env file in the same folder as the compose file with the following values and replace the dummy [pinata](https://pinata.cloud/) credentials with your own. Upload the initial global model in IPFS usind the Add function in FILES from [pinata](https://pinata.cloud/). Choose FILE UPLOAD and the Initial_GM file in this folder, then repace the INITIAL_GM_CID with your new CID. 
-
-The following values do not have to be changed if you want to use [Anvil](https://getfoundry.sh/anvil/overview/) a fast local Ethereum development node.
+Create a .env file in the same folder as the compose file with the following values. 
 
 ```
-# Pinata credentials
-API_KEY= 03xxxxx...
-API_SECRET= 089xxxx...
-PINATA_JWT=eyJhbxxxxxx...
-IPFS_GATEWAY= https://xxxxx.....xxxxxx.mypinata.cloud
-INITIAL_GM_CID=bafxxxxx...
+# IPFS
+IPFS_PROVIDER=kubo
+KUBO_API=http://ipfs_local:5001
+KUBO_GATEWAY=http://ipfs_local:8080
+INITIAL_GM_CID=QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8
 
 # Anvil deployed contract addresses
 REGISTRY_ADDRESS= 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
@@ -42,6 +39,18 @@ W3_DEVICE_ID= 3
 
 ```
 
+If you wish to use [pinata](https://pinata.cloud/) instead of a local [Kubo](https://github.com/ipfs/kubo) IPFS node replace the dummy credentials with your own. Upload the initial global model in IPFS usind the Add function in FILES from [pinata](https://pinata.cloud/). Choose FILE UPLOAD and the Initial_GM file in this folder, then repace the INITIAL_GM_CID with your new CID. 
+
+```
+# IPFS Pinata credentials
+API_KEY= 03xxxxx...
+API_SECRET= 089xxxx...
+PINATA_JWT=eyJhbxxxxxx...
+IPFS_GATEWAY= https://xxxxx.....xxxxxx.mypinata.cloud
+INITIAL_GM_CID=bafxxxxx...
+IPFS_PROVIDER=pinata
+```
+
 Be sure to have Docker Desktop running.
 
 From DFL/ then run 
@@ -54,4 +63,10 @@ Or, from DFL/docker/ run
 
 ```
 docker compose -f compose.yml up --build
+```
+
+Open Kubu Web UI
+
+```
+http://127.0.0.1:5001/ipfs/
 ```

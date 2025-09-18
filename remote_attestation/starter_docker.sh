@@ -75,6 +75,11 @@ echo "Authorization Status:"
 [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_3)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_3: yes || echo $ADDRESS_3: no
 [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_4)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_4: yes || echo $ADDRESS_4: no
 
+if [ "${IPFS_PROVIDER:-}" != "pinata" ]; then
+    echo "Pinning the initial GM to the local IPFS node"
+    curl -sSf -X POST "http://ipfs:5001/api/v0/pin/add?arg=${INITIAL_GM_CID}"
+    curl -sSf -X POST "http://ipfs:5001/api/v0/files/cp?arg=/ipfs/${INITIAL_GM_CID}&arg=/start"
+fi
 
 #RISC0_DEV_MODE=1 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_1 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
 #RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_1 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
