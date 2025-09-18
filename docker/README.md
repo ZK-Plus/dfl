@@ -68,5 +68,5 @@ docker compose -f compose.yml up --build
 Open Kubu Web UI
 
 ```
-http://127.0.0.1:5001/ipfs/
+http://127.0.0.1:5001/ipfs/bafybeifplj2s3yegn7ko7tdnwpoxa4c5uaqnk2ajnw5geqm34slcj6b6mu/#/welcome
 ```
