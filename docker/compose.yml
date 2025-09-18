@@ -14,6 +14,17 @@ services:
       interval: 2s
       timeout: 1s
       retries: 15
+  
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: ipfs_local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4001:4001"
+      - "127.0.0.1:5001:5001"
+      - "127.0.0.1:8080:8080"
+    tmpfs:
+      - /data/ipfs
 
   remote-attestation: 
     build:
@@ -27,6 +38,7 @@ services:
         condition: service_healthy
     environment:
       FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
+      IPFS_PROVIDER: ${IPFS_PROVIDER}
       INITIAL_GM_CID: ${INITIAL_GM_CID}
     command: ["/dfl/remote_attestation/starter_docker.sh"]
 
@@ -45,6 +57,9 @@ services:
       API_SECRET: ${API_SECRET}
       PINATA_JWT: ${PINATA_JWT}
       IPFS_GATEWAY: ${IPFS_GATEWAY}
+      KUBO_API: ${KUBO_API}
+      KUBO_GATEWAY: ${KUBO_GATEWAY}
+      IPFS_PROVIDER: ${IPFS_PROVIDER}
       REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
       AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
       GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
@@ -83,6 +98,9 @@ services:
       API_SECRET: ${API_SECRET}
       PINATA_JWT: ${PINATA_JWT}
       IPFS_GATEWAY: ${IPFS_GATEWAY}
+      KUBO_API: ${KUBO_API}
+      KUBO_GATEWAY: ${KUBO_GATEWAY}
+      IPFS_PROVIDER: ${IPFS_PROVIDER}
       REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
       AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
       GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
@@ -116,6 +134,9 @@ services:
       API_SECRET: ${API_SECRET}
       PINATA_JWT: ${PINATA_JWT}
       IPFS_GATEWAY: ${IPFS_GATEWAY}
+      KUBO_API: ${KUBO_API}
+      KUBO_GATEWAY: ${KUBO_GATEWAY}
+      IPFS_PROVIDER: ${IPFS_PROVIDER}
       REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
       AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
       GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
@@ -149,6 +170,9 @@ services:
       API_SECRET: ${API_SECRET}
       PINATA_JWT: ${PINATA_JWT}
       IPFS_GATEWAY: ${IPFS_GATEWAY}
+      KUBO_API: ${KUBO_API}
+      KUBO_GATEWAY: ${KUBO_GATEWAY}
+      IPFS_PROVIDER: ${IPFS_PROVIDER}
       REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
       AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
       GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
