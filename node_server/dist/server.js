@@ -41,7 +41,7 @@ const stateMachine = async () => {
                     await getCurrentModel();
                     console.log("Starting local training ...");
                     try {
-                        const { stdout, stderr } = await trainingProcess(exePath, ["train"]);
+                        const { stdout, stderr } = await trainingProcess(exePath, ["train", String("10")]);
                         console.log('stdout:', stdout);
                         if (stderr) {
                             console.error('stderr:', stderr);

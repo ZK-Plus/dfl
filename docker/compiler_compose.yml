@@ -1,0 +1,12 @@
+services:
+  compiler:
+    platform: linux/amd64 
+    image: dfl-compiler:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile_Complier
+    volumes:
+      - ../linux_out/docker:/out
+    # platform: linux/amd64
+    command:
+        ["/bin/bash","-lc", "exe=$$(find . -maxdepth 3 -type f -name start.exe | head -n1); test -n \"$$exe\"; mkdir -p /out; cp -v \"$$exe\" /out/"]
