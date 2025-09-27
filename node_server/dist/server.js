@@ -26,7 +26,7 @@ const stateMachine = async () => {
                     console.log("I am the aggregator");
                     console.log("Starting the zerompq server ...");
                     try {
-                        const { stdout, stderr } = await trainingProcess(exePath, ["server"]);
+                        const { stdout, stderr } = await trainingProcess(exePath, ["server", String(process.env.CLIENT_LIMIT)]);
                         console.log('stdout:', stdout);
                         if (stderr) console.error('stderr:', stderr);
                         await setCurrentState("AGGREGATING");

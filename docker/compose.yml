@@ -64,6 +64,7 @@ services:
       AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
       GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
       SEPOLIA_RPC_URL: ${RPC_URL}
+      CLIENT_LIMIT: ${CLIENT_LIMIT}
       ACCOUNT_ADDRESS: ${W0_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W0_PRIVATE_KEY}
       DEVICE_ID: ${W0_DEVICE_ID}
@@ -76,6 +77,8 @@ services:
         cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
         cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
         cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+        cp /dfl/keys/private_key.pem /dfl/node_server/private_key.pem && \
+        cp /dfl/keys/public_key.pem /dfl/node_server/public_key.pem && \
         exec node /dfl/node_server/dist/server.js"]
       #command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
     #    cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
@@ -105,6 +108,7 @@ services:
       AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
       GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
       SEPOLIA_RPC_URL: ${RPC_URL}
+      CLIENT_LIMIT: ${CLIENT_LIMIT}
       ACCOUNT_ADDRESS: ${W1_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W1_PRIVATE_KEY}
       DEVICE_ID: ${W1_DEVICE_ID}
@@ -117,6 +121,8 @@ services:
         cp /dfl/config/training_data/train-labels-1.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
         cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
         cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+        cp /dfl/keys/private_key_1.pem /dfl/node_server/private_key.pem && \
+        cp /dfl/keys/public_key_1.pem /dfl/node_server/public_key.pem && \
         exec node /dfl/node_server/dist/server.js"]
 
   VM-2:
@@ -141,6 +147,7 @@ services:
       AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
       GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
       SEPOLIA_RPC_URL: ${RPC_URL}
+      CLIENT_LIMIT: ${CLIENT_LIMIT}
       ACCOUNT_ADDRESS: ${W2_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W2_PRIVATE_KEY}
       DEVICE_ID: ${W2_DEVICE_ID}
@@ -153,6 +160,8 @@ services:
       cp /dfl/config/training_data/train-labels-2.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
       cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+      cp /dfl/keys/private_key_2.pem /dfl/node_server/private_key.pem && \
+      cp /dfl/keys/public_key_2.pem /dfl/node_server/public_key.pem && \
       exec node /dfl/node_server/dist/server.js"]
 
   VM-3:
@@ -177,6 +186,7 @@ services:
       AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
       GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
       SEPOLIA_RPC_URL: ${RPC_URL}
+      CLIENT_LIMIT: ${CLIENT_LIMIT}
       ACCOUNT_ADDRESS: ${W3_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W3_PRIVATE_KEY}
       DEVICE_ID: ${W3_DEVICE_ID}
@@ -189,12 +199,46 @@ services:
         cp /dfl/config/training_data/train-labels-3.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
         cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
         cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+        cp /dfl/keys/private_key_3.pem /dfl/node_server/private_key.pem && \
+        cp /dfl/keys/public_key_3.pem /dfl/node_server/public_key.pem && \
         exec node /dfl/node_server/dist/server.js"]
 
 
-
-    #command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
-    #    cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
-    #    cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
-    #    cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte"]
-  #  command: ["/opt/dfl/start.exe","server"]
+  VM-4:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile_Worker
+    image: sonak53/dfl-server-img:latest
+    platform: linux/amd64
+    depends_on:
+      remote-attestation:
+        condition: service_completed_successfully
+    container_name: ${W4_ACCOUNT_ADDRESS}
+    environment:
+      API_KEY: ${API_KEY}
+      API_SECRET: ${API_SECRET}
+      PINATA_JWT: ${PINATA_JWT}
+      IPFS_GATEWAY: ${IPFS_GATEWAY}
+      KUBO_API: ${KUBO_API}
+      KUBO_GATEWAY: ${KUBO_GATEWAY}
+      IPFS_PROVIDER: ${IPFS_PROVIDER}
+      REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
+      AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
+      GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
+      SEPOLIA_RPC_URL: ${RPC_URL}
+      CLIENT_LIMIT: ${CLIENT_LIMIT}
+      ACCOUNT_ADDRESS: ${W4_ACCOUNT_ADDRESS}
+      PRIVATE_KEY: ${W4_PRIVATE_KEY}
+      DEVICE_ID: ${W4_DEVICE_ID}
+    #volumes:
+    #  - .cloud_setup/ansible/config/training_data/train-images-3.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/training_data/train-labels-3.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-images.idx3-ubyte:/dfl/node_server/data/t10k-images.idx3-ubyte
+    #  - .cloud_setup/ansible/config/test_data/t10k-labels.idx1-ubyte:/dfl/node_server/data/t10k-labels.idx1-ubyte
+    command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
+      cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
+        cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
+        cp /dfl/config/test_data/t10k-labels.idx1-ubyte /dfl/node_server/data/t10k-labels.idx1-ubyte && \
+        cp /dfl/keys/private_key_4.pem /dfl/node_server/private_key.pem && \
+        cp /dfl/keys/public_key_4.pem /dfl/node_server/public_key.pem && \
+        exec node /dfl/node_server/dist/server.js"]
