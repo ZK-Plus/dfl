@@ -113,15 +113,14 @@ void simulate_fed_avg()
     }
 }
 
-void start_zerompq_server()
+void start_zerompq_server(int number_clients)
 {
 
-    int number_clients = 2;
     int counter = 0;
     zmq::context_t context{1};
     zmq::socket_t socket{context, zmq::socket_type::rep};
     socket.bind("tcp://*:5555");
-    std::cout << "Server started\n";
+    std::cout << "Server started with " << number_clients << " expected clients\n";
 
     fs::create_directory("./received_models"); // Ensure the directory exists
 
@@ -190,7 +189,7 @@ int main(int argc, char *argv[])
         if (std::string(argv[1]) == "server")
         {
             std::cout << "Starting server\n";
-            start_zerompq_server();
+            start_zerompq_server(std::stoi(argv[2]));
             return 0;
         }
         else if (std::string(argv[1]) == "client")

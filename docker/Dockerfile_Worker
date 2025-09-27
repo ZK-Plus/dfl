@@ -8,6 +8,7 @@ COPY cloud_setup/ansible/config ./config
 
 COPY node_server ./node_server
 
+COPY docker/keys ./keys
 
 #COPY neural_network/data/lm.bin ./node_server/data/lm.bin
 
