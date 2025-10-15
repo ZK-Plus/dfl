@@ -14,10 +14,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const exePath = path.join(__dirname, '../start.exe');
 const deviceID = process.env.DEVICE_ID;
+let round = process.env.ROUND;
 let currentState = "";
 let aggregatorProc = null;
 const stateMachine = async () => {
-    while (true) {
+    //while (true) {
+    while (round > 0) {
         let state = await getCurrentState();
 
         switch (state["0"]) {
@@ -39,9 +41,13 @@ const stateMachine = async () => {
                     console.log("I am not the aggregator");
                     console.log("Fetching the global model from IPFS ...");
                     await getCurrentModel();
+
+                    // Merke aktuellen GM-CID als Referenz für das "Signal" des Aggregators
+                    const prevGM = await getCurrentGM();
+
                     console.log("Starting local training ...");
                     try {
-                        const { stdout, stderr } = await trainingProcess(exePath, ["train", String("10")]);
+                        const { stdout, stderr } = await trainingProcess(exePath, ["train", String(process.env.EPOCH)]);
                         console.log('stdout:', stdout);
                         if (stderr) {
                             console.error('stderr:', stderr);
@@ -51,7 +57,6 @@ const stateMachine = async () => {
                         return;
                     }
                     console.log("Local training complete.");
-                    // transfer the local model to the aggregator by calling another executable
                     console.log("Starting the zerompq client ...");
                     try {
                         const { stdout, stderr } = await trainingProcess(exePath, ["client", String(state["1"]), String(deviceID)]);
@@ -65,10 +70,12 @@ const stateMachine = async () => {
                         return;
                     }
                     console.log("Transfer complete. Send local model to aggregator.");
-                    console.log("Shutting down client.");
-                    process.exit(0);          
+                    console.log("Waiting till next round.");
+                    const newGM = await waitForGMUpdate(prevGM, { pollMs: 5000, timeoutMs: 10 * 60 * 1000 });
+                    console.log("New Global Model detected:", newGM);
+                    continue;
+                    //break;
                 }
-                break;
 
             case "AGGREGATING":
                 if (state[1] === process.env.ACCOUNT_ADDRESS) {
@@ -105,10 +112,16 @@ const stateMachine = async () => {
                     }
                     console.log("Updating complete.");
                     //await setCurrentState("IDLE");
-                    console.log("Shutting down aggregator.");
-                    process.exit(0);
+                    console.log("Current Global Model:", await getCurrentGM());
+                    await stageCleaning();
+                    console.log("Passed cleaning");
+                    round--;
+                    console.log("Rounds left: ", round);
+                    await setCurrentState("TRAINING");
+                    continue;
                 }
-                return;
+                //return;
+                break;
 
             default:
                 currentState = "IDLE";
@@ -161,6 +174,18 @@ async function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
 }
 
+async function waitForGMUpdate(prevCid, { pollMs = 3000, timeoutMs = 10 * 60 * 1000 } = {}) {
+    const start = Date.now();
+    while (true) {
+        const cid = await getCurrentGM();
+        if (cid && cid !== prevCid) return cid;
+        if (Date.now() - start > timeoutMs) {
+            throw new Error("Timeout waiting for aggregator signal (new Global Model).");
+        }
+        await sleep(pollMs);
+    }
+}
+
 async function runService() {
     try {
         await stateMachine();
@@ -180,3 +205,26 @@ process.on('SIGTERM', () => {
     console.log('SIGTERM received. Exiting.');
     process.exit(0);
 });
+
+async function stageCleaning() {
+    await Promise.all([
+        cleanFilesInDir(srcModelsDir),
+        cleanFilesInDir(resultsIIDDir),
+    ]);
+    console.log("Cleaned files in %s and %s", srcModelsDir, resultsIIDDir);
+}
+
+async function cleanFilesInDir(dir) {
+    try {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        await Promise.all(entries.map(async (e) => {
+            const full = path.join(dir, e.name);
+            if (e.isFile() || e.isSymbolicLink()) {
+                await fs.unlink(full).catch(() => {});
+            }
+        }));
+    } catch (err) {
+        if (err && err.code === 'ENOENT') return;
+        throw err;
+    }
+}

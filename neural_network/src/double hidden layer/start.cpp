@@ -215,6 +215,7 @@ int main(int argc, char *argv[])
         else if (std::string(argv[1]) == "aggregate")
         {
             federatedAvg("./data/results_iid/wb_client_", "./data/results_iid/aggregated.bin", std::stoi(argv[2]));
+            runTest();
             return 0;
         }
         else

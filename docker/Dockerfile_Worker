@@ -6,7 +6,7 @@ WORKDIR /dfl
 
 COPY cloud_setup/ansible/config ./config
 
-COPY node_server ./node_server
+
 
 COPY docker/keys ./keys
 
@@ -25,7 +25,7 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | b
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \
     nvm install 20
 
-
+COPY node_server ./node_server
 
 WORKDIR /dfl/node_server
 
