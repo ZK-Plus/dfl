@@ -392,12 +392,12 @@ int train_network(const string &wb_in, const string &wb_out, const string &image
         seconds %= 60;
 
         // Print the results of the epoch
-        // cout << "Epoch: " << epoch << "/" << NUM_EPOCHS << "\n";
-        // cout << "Accuracy: " << count << "/" << NUM_TRAIN_IMAGES << "\n";
-        // cout << "Time taken: " << duration << " seconds \n";
-        // cout << "Estimated time remaining: ";
-        // printf("%02d:%02d:%02d\n", hours, minutes, seconds);
-        // cout << "\n";
+        cout << "Epoch: " << epoch << "/" << NUM_EPOCHS << "\n";
+        cout << "Accuracy: " << count << "/" << NUM_TRAIN_IMAGES << "\n";
+        cout << "Time taken: " << duration << " seconds \n";
+        cout << "Estimated time remaining: ";
+        printf("%02d:%02d:%02d\n", hours, minutes, seconds);
+        cout << "\n";
     }
 
     cout << "Finished training!\n";

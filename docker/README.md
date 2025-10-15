@@ -5,6 +5,11 @@
 Create a .env file in the same folder as the compose file with the following values. 
 
 ```
+# Round configuration
+CLIENT_LIMIT=2
+EPOCH=1
+ROUND=5
+
 # IPFS
 IPFS_PROVIDER=kubo
 KUBO_API=http://ipfs_local:5001
@@ -69,4 +74,9 @@ Open Kubu Web UI
 
 ```
 http://127.0.0.1:5001/ipfs/bafybeifplj2s3yegn7ko7tdnwpoxa4c5uaqnk2ajnw5geqm34slcj6b6mu/#/welcome
+```
+
+Check current IPFS CID in GM Contract from a new console
+```
+cast call "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" "globalModel()(string)" --rpc-url http://localhost:8545
 ```
