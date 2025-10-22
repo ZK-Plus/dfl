@@ -14,9 +14,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const exePath = path.join(__dirname, '../start.exe');
 const deviceID = process.env.DEVICE_ID;
-let round = process.env.ROUND;
+let round = Number(process.env.ROUND ?? 1); // parse as number
 let currentState = "";
 let aggregatorProc = null;
+
+async function stopAggregatorServer({ softMs = 2000 } = {}) {
+    if (!aggregatorProc) return;
+    return new Promise((resolve) => {
+        let done = false;
+        const onExit = () => {
+            if (done) return;
+            done = true;
+            aggregatorProc = null;
+            resolve();
+        };
+        aggregatorProc.once('exit', onExit);
+        try { aggregatorProc.kill('SIGTERM'); } catch {}
+        setTimeout(() => {
+            if (done) return;
+            try { aggregatorProc.kill('SIGKILL'); } catch {}
+            // falls exit-Event schon gekommen ist, onExit macht den Rest
+        }, softMs);
+    });
+}
+
 const stateMachine = async () => {
     //while (true) {
     while (round > 0) {
@@ -28,9 +49,17 @@ const stateMachine = async () => {
                     console.log("I am the aggregator");
                     console.log("Starting the zerompq server ...");
                     try {
-                        const { stdout, stderr } = await trainingProcess(exePath, ["server", String(process.env.CLIENT_LIMIT)]);
-                        console.log('stdout:', stdout);
-                        if (stderr) console.error('stderr:', stderr);
+                        if (!aggregatorProc) {
+                            aggregatorProc = child_process.spawn(
+                                exePath,
+                                ["server", String(process.env.CLIENT_LIMIT)],
+                                { stdio: "inherit" }
+                            );
+                            aggregatorProc.on("exit", (code, signal) => {
+                                console.log(`aggregator server exited: code=${code} signal=${signal}`);
+                                aggregatorProc = null;
+                            });
+                        }
                         await setCurrentState("AGGREGATING");
                         continue;
                     } catch (e) {
@@ -57,6 +86,7 @@ const stateMachine = async () => {
                         return;
                     }
                     console.log("Local training complete.");
+                    console.log("Top contributor:", await getTopContributor());
                     console.log("Starting the zerompq client ...");
                     try {
                         const { stdout, stderr } = await trainingProcess(exePath, ["client", String(state["1"]), String(deviceID)]);
@@ -69,10 +99,17 @@ const stateMachine = async () => {
                         console.error("Error during model transfer:", e);
                         return;
                     }
+                    console.log("Top contributor:", await getTopContributor());
                     console.log("Transfer complete. Send local model to aggregator.");
+                    console.log("Rounds %d left.", round);
                     console.log("Waiting till next round.");
-                    const newGM = await waitForGMUpdate(prevGM, { pollMs: 5000, timeoutMs: 10 * 60 * 1000 });
-                    console.log("New Global Model detected:", newGM);
+                    try {
+                        const newGM = await waitForGMUpdate(prevGM, { pollMs: 5000, timeoutMs: 30 * 1000 });
+                        console.log("New Global Model detected:", newGM);
+                    } catch (e) {
+                        console.warn("No new GM within timeout. Continuing loop.");
+                    }
+                    await sleep(2000);
                     continue;
                     //break;
                 }
@@ -83,15 +120,41 @@ const stateMachine = async () => {
                     console.log("I am the aggregator");
                     console.log("Starting the aggregation process ...");
                     try {
+                        const expected = Number(process.env.CLIENT_LIMIT || 1);
+                        const present = await waitForModels(expected, { dir: srcModelsDir, pollMs: 2000, timeoutMs: 20 * 1000 });
+                        console.log(`Models present before aggregation: ${present}/${expected}`);
+
+                        if (aggregatorProc) {
+                            console.log("Stopping aggregator server before aggregation...");
+                            await stopAggregatorServer({ softMs: 1500 });
+                        }
+
                         const count = await stageAggregation();
-                        const { stdout, stderr } = await trainingProcess(exePath, ["aggregate", String(count)]);
+                        console.log(`Staged ${count} model file(s) for aggregation.`);
+                        if (count <= 0) {
+                            console.log("No models to aggregate (count=0). Waiting for next loop.");
+                            await sleep(2000);
+                            continue;
+                        }
+                        if (count < expected) {
+                            console.log(`Aggregating with ${count}/${expected} models.`);
+                        }
+
+                        // Wichtig: Timeout und großer Buffer, damit der Prozess nicht hängt
+                        const { stdout, stderr } = await trainingProcess(
+                            exePath,
+                            ["aggregate", String(count)],
+                            { timeout: 3 * 60 * 1000, killSignal: 'SIGKILL', maxBuffer: 16 * 1024 * 1024 }
+                        );
                         console.log('stdout:', stdout);
                         if (stderr) {
                             console.error('stderr:', stderr);
                         }
                     } catch (e) {
                         console.error("Error during aggregation:", e);
-                        return;
+                        // nicht beenden – nächster Loop
+                        await sleep(2000);
+                        continue;
                     }
                     console.log("Aggregation complete.");
                     await setCurrentState("UPDATING");
@@ -118,14 +181,20 @@ const stateMachine = async () => {
                     round--;
                     console.log("Rounds left: ", round);
                     await setCurrentState("TRAINING");
+                    console.log("Set state to TRAINING for next round");
+                    await triggerAggregatorSelection();
+                    console.log("Triggered new aggregator selection");
+
                     continue;
                 }
                 //return;
                 break;
 
             default:
+                console.log("Unknown state:", state);
                 currentState = "IDLE";
-                return;
+                await sleep(2000);
+                continue; // nicht beenden
         }
     }
 };
@@ -174,6 +243,32 @@ async function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
 }
 
+async function countBinFiles(dir) {
+    try {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        return entries.filter(e => e.isFile() && e.name.endsWith('.bin')).length;
+    } catch (e) {
+        if (e && e.code === 'ENOENT') return 0;
+        throw e;
+    }
+}
+
+async function waitForModels(expected, { dir, pollMs = 2000, timeoutMs = 10 * 60 * 1000 } = {}) {
+    const start = Date.now();
+    while (true) {
+        const n = await countBinFiles(dir);
+        if (n >= expected) {
+            console.log(`Received ${n}/${expected} model files.`);
+            return n; // Anzahl zurückgeben
+        }
+        if (Date.now() - start > timeoutMs) {
+            console.warn(`Timeout waiting for ${expected} models. Proceeding with ${n} present in ${dir}.`);
+            return n; // mit aktueller Anzahl fortfahren
+        }
+        await sleep(pollMs);
+    }
+}
+
 async function waitForGMUpdate(prevCid, { pollMs = 3000, timeoutMs = 10 * 60 * 1000 } = {}) {
     const start = Date.now();
     while (true) {
@@ -199,10 +294,16 @@ runService();
 
 process.on('SIGINT', () => {
     console.log('SIGINT received. Exiting.');
+    if (aggregatorProc) {
+        try { aggregatorProc.kill('SIGTERM'); } catch {}
+    }
     process.exit(0);
 });
 process.on('SIGTERM', () => {
     console.log('SIGTERM received. Exiting.');
+    if (aggregatorProc) {
+        try { aggregatorProc.kill('SIGTERM'); } catch {}
+    }
     process.exit(0);
 });
 
