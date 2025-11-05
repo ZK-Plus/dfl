@@ -212,13 +212,13 @@ void signLocalModel(const MatrixXd &model, EVP_PKEY *privateKey, string &signatu
     }
 
     EVP_MD_CTX_free(mdctx);
-    cout << "Global model signed successfully." << endl;
+    cout << "Local model signed successfully." << endl;
 }
 
-// Function to encrypt the global model using AES encryption
+// Function to encrypt the local model using AES encryption
 void encryptLocalModel(const MatrixXd &model, string &encryptedData, const unsigned char *key, const unsigned char *iv)
 {
-    cout << "Encrypting global model..." << endl;
+    cout << "Encrypting local model..." << endl;
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx)
     {
@@ -261,7 +261,7 @@ void encryptLocalModel(const MatrixXd &model, string &encryptedData, const unsig
     encryptedData.append(reinterpret_cast<char *>(outbuf), len);
 
     EVP_CIPHER_CTX_free(ctx);
-    cout << "Global model encrypted successfully." << endl;
+    cout << "Local model encrypted successfully." << endl;
 }
 
 void verifySignatureGM()
@@ -341,11 +341,11 @@ int train_network(const string &wb_in, const string &wb_out, const string &image
     srand((unsigned int)time(nullptr));
 
     // overhead through signature verification
-    OpenSSL_add_all_algorithms();
-    ERR_load_crypto_strings();
+    //OpenSSL_add_all_algorithms();
+    //ERR_load_crypto_strings();
 
-    simulateKeyFetchLM();
-    verifySignatureGM();
+    //simulateKeyFetchLM();
+    //verifySignatureGM();
 
     // Simulate a private key for signing
     EVP_PKEY *privateKey = loadPrivateKeyLM("private_key.pem");

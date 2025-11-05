@@ -162,6 +162,7 @@ fn main() -> Result<()> {
     //let attestation_report_content = fs::read("./apps/data/phala_attestation_report.json").expect("Unable to read phala_attestation_report.json");
 
     let attestation_report_quote_hex = fs::read_to_string("./apps/data/phala_tdx_quote").expect("Unable to read phala_tdx_quote");
+    let public_key = fs::read_to_string("./apps/data/public_key.pem").expect("Unable to read public_key.pem");
     let attestation_report_quote = hex::decode(attestation_report_quote_hex.trim()).expect("Failed to decode hex string");
 
     let env = ExecutorEnv::builder().write(&attestation_report_quote)?.build()?;
@@ -218,21 +219,22 @@ fn main() -> Result<()> {
     // Construct function call: Using the IEvenNumber interface, the application constructs
     // the ABI-encoded function call for the set function of the EvenNumber contract.
     // This call includes the verified number, the post-state digest, and the seal (proof).
-    // let public_key_str = String::from_utf8_lossy(&public_key.contents).to_string();
-    // let calldata = IDeviceRegistry::IDeviceRegistryCalls::registerDevice(IDeviceRegistry::registerDeviceCall {
-    //     x,
-    //     seal: seal.into(),
-    //     _address: "0x8B088e2424b0a09b04Fc8212Bd7f0e3F38Cb2dBD".parse().unwrap(),
-    //     _public_ip: "test_public_ip".to_string(),
-    //     _msg_broker_ip: "test_msg_broker_ip".to_string(),
-    //     _public_key: public_key.contents,
-    // })
-    // .abi_encode();
-    let calldata = IDeviceRegistry::IDeviceRegistryCalls::runProof(IDeviceRegistry::runProofCall {
-        seal: seal.into(),
+    //let public_key_str = String::from_utf8_lossy(&public_key.contents).to_string();
+    let calldata = IDeviceRegistry::IDeviceRegistryCalls::registerDevice(IDeviceRegistry::registerDeviceCall {
         x,
+        seal: seal.into(),
+        _address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8".parse().unwrap(),
+        _public_ip: "https://7767843ff35bc83acc5cabb9b6d843672a5432f8-8090.dstack-pha-prod7.phala.network".to_string(),
+        _msg_broker_ip: "test_msg_broker_ip".to_string(),
+        _public_key: public_key.into_bytes(),
     })
     .abi_encode();
+    
+    //let calldata = IDeviceRegistry::IDeviceRegistryCalls::runProof(IDeviceRegistry::runProofCall {
+    //    seal: seal.into(),
+    //    x,
+    //})
+    //.abi_encode();
 
     // Initialize the async runtime environment to handle the transaction sending.
     let runtime = tokio::runtime::Runtime::new()?;
