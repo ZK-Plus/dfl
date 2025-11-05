@@ -7,6 +7,7 @@ import util from 'util';
 import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection} from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
 import fs from 'fs/promises';
+import { DstackClient } from '@phala/dstack-sdk';
 
 const trainingProcess = util.promisify(child_process.execFile);
 // Define __dirname manually
@@ -86,7 +87,35 @@ const stateMachine = async () => {
                         return;
                     }
                     console.log("Local training complete.");
-                    console.log("Top contributor:", await getTopContributor());
+
+                    if (process.env.DOCKER === "phala") {
+                        // todo: only for TDX attestation    
+                        // Check device registration contract if worker is already registered
+                        console.log("Fetching TDX Quote ...");
+                        // Create client - automatically connects to /var/run/dstack.sock
+                        const client = new DstackClient();
+                        // For local development with simulator     
+                        const devClient = new DstackClient('http://localhost:8090');
+
+                        // Get TEE instance information
+                        const info = await client.info();
+                        console.log('App ID:', info.app_id);
+                        console.log('Instance ID:', info.instance_id);
+                        console.log('App Name:', info.app_name);
+                        console.log('TCB Info:', info.tcb_info);
+
+                        // Generate remote attestation quote
+                        const applicationData = JSON.stringify({
+                            version: '1.0.0',
+                            timestamp: Date.now(),
+                            user_id: 'alice'
+                        });
+
+                        const quote = await client.getQuote(applicationData);
+                        console.log('TDX Quote:', quote.quote);
+
+                    }
+
                     console.log("Starting the zerompq client ...");
                     try {
                         const { stdout, stderr } = await trainingProcess(exePath, ["client", String(state["1"]), String(deviceID)]);
