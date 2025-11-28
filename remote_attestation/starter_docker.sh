@@ -9,7 +9,7 @@ echo "Wallet private key wurde gesetzt."
 
 #cargo build
 
-if [ "${Docker:-}" = "phala" ]; then
+if [ "${DOCKER:-}" = "phala" ]; then
     export rpc_url=https://61ecc557e3b36593390057d322d46e9488032c34-8545.dstack-prod5.phala.network
 else
     export rpc_url=http://anvil:8545
@@ -186,7 +186,7 @@ echo "Authorization Status:"
 # [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_18)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_18: yes || echo $ADDRESS_18: no
 # [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_19)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_19: yes || echo $ADDRESS_19: no
 
-if [ "${Docker:-}" = "phala" ]; then
+if [ "${DOCKER:-}" = "phala" ]; then
     if [ "${IPFS_PROVIDER:-}" != "pinata" ]; then
         echo "Pinning the initial GM to the IPFS node"
         curl -sSf -X POST "https://61ecc557e3b36593390057d322d46e9488032c34-5001.dstack-prod5.phala.network/api/v0/pin/add?arg=${INITIAL_GM_CID}"
@@ -202,5 +202,5 @@ fi
 
 
 
-RISC0_DEV_MODE=1 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_0 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
-#RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_0 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
+#RISC0_DEV_MODE=1 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_0 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
+RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_0 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS

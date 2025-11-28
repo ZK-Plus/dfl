@@ -1,20 +1,88 @@
-FROM ghcr.io/foundry-rs/foundry
+#FROM debian:bullseye-slim AS builder
 
-USER root
+#ENV DEBIAN_FRONTEND=noninteractive
+#RUN apt-get update && \
+#    apt-get install -y --no-install-recommends curl ca-certificates jq build-essential git pkg-config libssl-dev && \
+#    rm -rf /var/lib/apt/lists/*
+
+#SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Install Rust toolchain (needed for rzup)
+#RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --profile minimal && \
+#    . /root/.cargo/env && rustc --version
+#ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install RISC Zero tooling
+#RUN curl -L https://risczero.com/install | bash && \
+#    /root/.risc0/bin/rzup install
+#ENV PATH="/root/.risc0/bin:${PATH}"
+
+# Install Foundry
+#RUN curl -L https://foundry.paradigm.xyz | bash && \
+#    /root/.foundry/bin/foundryup
+#ENV PATH="/root/.foundry/bin:${PATH}"
+
+#WORKDIR /dfl
+#COPY smart_contract ./smart_contract
+#COPY remote_attestation ./remote_attestation
+
+#WORKDIR /dfl/remote_attestation
+#RUN cargo build --release --locked
+
+# 1. Verwende ein offizielles Rust-Image als Basis
+FROM rust:1.87-slim
+
+# 2. Installiere Systemabhängigkeiten
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    pkg-config \
+    curl \
+    git \
+    bash \
+    ca-certificates \
+    cmake \
+    jq \
+    docker.io \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 3. Setze das Arbeitsverzeichnis
+#WORKDIR /dfl/
+
+# 4. Kopiere den Projektcode
+#COPY . .
+
+# 5. Installiere rzup und Toolchain in einem Schritt
+# RUN curl -L https://risczero.com/install | bash && \
+#     /root/.risc0/bin/rzup install
+
+RUN curl -L https://risczero.com/install | bash && \
+    /root/.risc0/bin/rzup install rust 1.85.0 && \
+    /root/.risc0/bin/rzup install cpp 2024.1.5 && \
+    /root/.risc0/bin/rzup install r0vm 2.3.0 && \
+    /root/.risc0/bin/rzup install cargo-risczero 2.3.0 && \
+    /root/.risc0/bin/rzup default r0vm 2.3.0
+
+# 6. Setze den PATH dauerhaft
+ENV PATH="/root/.risc0/bin:${PATH}"
+
+# Install Foundry (for forge fmt in build.rs)
+RUN curl -L https://foundry.paradigm.xyz | bash && \
+    /root/.foundry/bin/foundryup && \
+    /root/.foundry/bin/forge --version
+
+# Ensure tools on PATH
+ENV PATH="/root/.foundry/bin:/root/.risc0/bin:${PATH}"
+
 WORKDIR /dfl
-
-COPY --chown=root:root smart_contract ./smart_contract
-COPY --chown=root:root remote_attestation ./remote_attestation
-
-RUN apt-get update && \
-    apt-get install -y jq && \
-    apt-get install -y curl
-
-
-RUN mkdir -p /dfl/remote_attestation/out \
- && chmod -R a+rwX /dfl/remote_attestation \
- && if id -u foundry >/dev/null 2>&1; then chown -R foundry:foundry /dfl/remote_attestation; fi
+COPY smart_contract ./smart_contract
+COPY remote_attestation ./remote_attestation
 
 WORKDIR /dfl/remote_attestation
+RUN cargo build --release
 
+# 7. Baue dein Projekt
+#RUN cargo build --release
 
+# Server starten
+#CMD ["target/release/host"]
