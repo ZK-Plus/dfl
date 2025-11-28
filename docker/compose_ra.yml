@@ -1,0 +1,18 @@
+---
+services:
+  remote-attestation: 
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile_Remote_Attestation
+    image: sonak53/dfl-ra:latest_6
+    container_name: remote-attestation
+    platform: linux/amd64
+    environment:
+      FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
+      IPFS_PROVIDER: ${IPFS_PROVIDER}
+      DOCKER: ${DOCKER}
+      INITIAL_GM_CID: ${INITIAL_GM_CID}
+    command: ["/dfl/remote_attestation/starter_docker.sh"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      

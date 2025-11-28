@@ -17,7 +17,7 @@
 // to your deployed app contract.
 
 use alloy_primitives::{U256};
-use alloy_sol_types::{sol, SolInterface, SolValue};
+//use alloy_sol_types::{sol, SolInterface, SolValue};
 use anyhow::{Context, Result};
 use clap::Parser;
 use ethers::prelude::*;
@@ -25,6 +25,7 @@ use methods::VERIFY_AR_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
 use hex;
+use alloy_sol_types::{sol, SolCall};
 
 use std::fs;
 //use pem::parse;
@@ -120,10 +121,9 @@ struct InputData {
 
 fn main() -> Result<()> {
     env_logger::init();
-    // Parse CLI Arguments: The application starts by parsing command-line arguments provided by the user.
+
     let args = Args::parse();
 
-    // Create a new transaction sender using the parsed arguments.
     let tx_sender = TxSender::new(
         args.chain_id,
         &args.rpc_url,
@@ -131,117 +131,67 @@ fn main() -> Result<()> {
         &args.contract,
     )?;
 
-    // Read and parse the PEM files
-    /* This is for ARMs Remote Attestation.
-    let vcek_content = fs::read("./apps/data/vcek.pem").expect("Unable to read PEM file 1");
-    let vcek = parse(&vcek_content).expect("Unable to parse PEM file 1");
+    let attestation_report_quote_hex =
+        fs::read_to_string("./apps/data/phala_tdx_quote")
+            .context("Unable to read phala_tdx_quote")?;
 
-    let cert_chain_content = fs::read("./apps/data/cert_chain.pem").expect("Unable to read PEM file 2");
-    let cert_chain = parse(&cert_chain_content).expect("Unable to parse PEM file 2");
+    let public_key_pem =
+        fs::read_to_string("./apps/data/public_key.pem")
+            .context("Unable to read public_key.pem")?;
 
-    let public_key_content = fs::read("./apps/data/public_key.pem").expect("Unable to read PEM file 3");
-    let public_key = parse(&public_key_content).expect("Unable to parse PEM file 3");
-    
-    //print length of ca cert
-    log::info!("CA cert length: {}", cert_chain.contents.len());
-    log::info!("VCEK cert length: {}", vcek.contents.len());
+    let attestation_report_quote = hex::decode(attestation_report_quote_hex.trim())
+        .context("Failed to decode hex string from phala_tdx_quote")?;
 
-    // Serialize the PEM data
-    let input_data = InputData {
-        vcek: vcek.contents,
-        cert_chain: cert_chain.contents,
-        public_key: public_key.contents.clone(),
+    let env = ExecutorEnv::builder()
+        .write(&attestation_report_quote)?
+        .build()?;
+
+    log::info!("Starting Groth16 proving via Docker...");
+    let prover_result = default_prover().prove_with_ctx(
+        env,
+        &VerifierContext::default(),
+        VERIFY_AR_ELF,
+        &ProverOpts::groth16(),
+    );
+
+    let receipt = match prover_result {
+        Ok(r) => {
+            log::info!("Groth16 proving succeeded.");
+            r.receipt
+        }
+        Err(e) => {
+            log::error!("Groth16 prover failed: {e}");
+            return Err(e.into());
+        }
     };
 
-    let serialized_data = bincode::serialize(&input_data).expect("Serialization failed");
-    
-    // Debug: Print serialized data length
-    log::info!("Serialized data length: {}", serialized_data.len());
-    */
+    let groth16_seal = receipt
+        .inner
+        .groth16()
+        .context("Receipt is not a Groth16 receipt (no Groth16 seal present)")?;
 
-    //let attestation_report_content = fs::read("./apps/data/phala_attestation_report.json").expect("Unable to read phala_attestation_report.json");
+    let seal_bytes = groth16::encode(groth16_seal.seal.clone())
+        .context("Failed to RLP-encode Groth16 seal")?;
 
-    let attestation_report_quote_hex = fs::read_to_string("./apps/data/phala_tdx_quote").expect("Unable to read phala_tdx_quote");
-    let public_key = fs::read_to_string("./apps/data/public_key.pem").expect("Unable to read public_key.pem");
-    let attestation_report_quote = hex::decode(attestation_report_quote_hex.trim()).expect("Failed to decode hex string");
-
-    let env = ExecutorEnv::builder().write(&attestation_report_quote)?.build()?;
-    //let env = ExecutorEnv::builder().write(&attestation_report_content)?.build()?; //TDX Body
-    //let env = ExecutorEnv::builder().write(&serialized_data)?.build()?; // arm
-    ////let env = ExecutorEnv::builder().write_slice(&input).build()?;
-
-    log::info!("Executing proof request...");
-
-    let start = std::time::Instant::now();
-
-
-    let receipt = default_prover()
-        .prove_with_ctx(
-            env,
-            &VerifierContext::default(),
-            VERIFY_AR_ELF,
-            &ProverOpts::groth16(),
-        )?
-        .receipt;
-
-    log::info!("Proof request executed successfully.");
-    let end = std::time::Instant::now();
-
-    // Encode the seal with the selector.
-    let seal = groth16::encode(receipt.inner.groth16()?.seal.clone())?;
-
-    // Extract the journal from the receipt.
     let journal = receipt.journal.bytes.clone();
 
-    // print size of the journal
-    log::info!("Journal size: {}", receipt.journal.bytes.len());
+     let x = U256::from_be_slice(&journal);
 
-    // print size of the seal
-    log::info!("Seal size: {}", seal.len());
+    log::info!("Journal value x = {x}");
 
-    // Decode Journal: Upon receiving the proof, the application decodes the journal to extract
-    // the verified number. This ensures that the number being submitted to the blockchain matches
-    // the number that was verified off-chain.
-    let x = U256::abi_decode(&journal, true).context("decoding journal data")?;
-
-    log::info!("Verification result: {}", x);
-
-    // calculate execution time in seconds
-    let execution_time = end.duration_since(start).as_secs_f64();
-    log::info!("Execution time: {:.2} seconds", execution_time);
-    
-
-    // let addr_str = "0x927507b066B40C5a6b0fd327eFE1c9d33edeE759";
-    // let addr: Address = addr_str.parse().expect("Invalid address format");
-
-    log::info!("Sending transaction to contract...");
-
-    // Construct function call: Using the IEvenNumber interface, the application constructs
-    // the ABI-encoded function call for the set function of the EvenNumber contract.
-    // This call includes the verified number, the post-state digest, and the seal (proof).
-    //let public_key_str = String::from_utf8_lossy(&public_key.contents).to_string();
-    let calldata = IDeviceRegistry::IDeviceRegistryCalls::registerDevice(IDeviceRegistry::registerDeviceCall {
+    let calldata = IDeviceRegistry::registerDeviceCall {
         x,
-        seal: seal.into(),
-        _address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8".parse().unwrap(),
-        _public_ip: "https://7767843ff35bc83acc5cabb9b6d843672a5432f8-8090.dstack-pha-prod7.phala.network".to_string(),
-        _msg_broker_ip: "test_msg_broker_ip".to_string(),
-        _public_key: public_key.into_bytes(),
-    })
+        seal: seal_bytes.into(),
+        _address: "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512".parse().unwrap(),
+        _public_ip: "0x90F79bf6EB2c4f870365E785982E1f101E93b906".to_string(), 
+        _msg_broker_ip: "https://7767843ff35bc83acc5cabb9b6d843672a5432f8-8090.dstack-pha-prod7.phala.network".to_string(),
+        _public_key: public_key_pem.into_bytes().into(),
+    }
     .abi_encode();
-    
-    //let calldata = IDeviceRegistry::IDeviceRegistryCalls::runProof(IDeviceRegistry::runProofCall {
-    //    seal: seal.into(),
-    //    x,
-    //})
-    //.abi_encode();
 
-    // Initialize the async runtime environment to handle the transaction sending.
-    let runtime = tokio::runtime::Runtime::new()?;
-
-    // Send transaction: Finally, the TxSender component sends the transaction to the Ethereum blockchain,
-    // effectively calling the set function of the EvenNumber contract with the verified number and proof.
-    runtime.block_on(tx_sender.send(calldata))?;
+    let rt = tokio::runtime::Runtime::new()?;
+    let receipt = rt.block_on(tx_sender.send(calldata))?;
+    log::info!("Tx sent. Receipt: {receipt:?}");
 
     Ok(())
 }
