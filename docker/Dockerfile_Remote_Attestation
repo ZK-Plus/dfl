@@ -46,6 +46,8 @@ RUN apt-get update && apt-get install -y \
     docker.io \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+#RUN docker --version
+
 # 3. Setze das Arbeitsverzeichnis
 #WORKDIR /dfl/
 
@@ -79,7 +81,7 @@ COPY smart_contract ./smart_contract
 COPY remote_attestation ./remote_attestation
 
 WORKDIR /dfl/remote_attestation
-RUN cargo build --release
+#RUN cargo build --release
 
 # 7. Baue dein Projekt
 #RUN cargo build --release
