@@ -1,18 +1,36 @@
 ---
 services:
+  risc0-groth16-prover:
+    image: risczero/risc0-groth16-prover:v2025-01-31.1
+    container_name: risc0-groth16-prover
+    platform: linux/amd64  
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+    networks:
+      - dfl-network
+
   remote-attestation: 
     build:
       context: ..
       dockerfile: docker/Dockerfile_Remote_Attestation
-    image: sonak53/dfl-ra:latest_6
+    image: sonak53/dfl-ra:latest_7
     container_name: remote-attestation
-    platform: linux/amd64
+    platform: linux/amd64  
     environment:
       FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
       IPFS_PROVIDER: ${IPFS_PROVIDER}
       DOCKER: ${DOCKER}
       INITIAL_GM_CID: ${INITIAL_GM_CID}
+      RUST_LOG: debug
+      RISC0_GROTH16_PROVER_URL: "http://risc0-groth16-prover:8080"
     command: ["/dfl/remote_attestation/starter_docker.sh"]
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      
+    depends_on:
+      - risc0-groth16-prover
+    networks:
+      - dfl-network
+
+networks:
+  dfl-network:
+    driver: bridge
