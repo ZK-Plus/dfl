@@ -105,7 +105,45 @@ export const getTopContributor = async () => {
     return topContributor;
 }
 
+export const getRound = async () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    const contract = new web3.eth.Contract(abi, address);
+    let round = await contract.methods.getRound().call().then((result) => {
+        return result;
+    });
+    return round;
+}
 
+export const incrementRound = async () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    const contract = new web3.eth.Contract(abi, address);
+
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await contract.methods.incrementRound().estimateGas({ from: account.address });
+
+    const tx = {
+        from: account.address,
+        to: address,
+        gas: gasEstimate,
+        gasPrice: gasPrice,
+        data: contract.methods.incrementRound().encodeABI(),
+    };
+
+    try {
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction as string);
+        console.log("Transaction receipt: ", receipt);
+        return receipt;
+    } catch (error) {
+        console.error("Error sending transaction: ", error);
+        throw error;
+    }
+}
 
 // get current state from aggregator
 export const getCurrentState = async () => {
@@ -221,4 +259,3 @@ export const triggerAggregatorSelection = async () => {
 }
 
 
-   

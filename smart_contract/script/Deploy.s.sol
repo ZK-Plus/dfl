@@ -44,7 +44,8 @@ contract ContractDeploy is Script {
             //address(0xBA874f9c3C3a68F1d196f29DFE14847590559E12),
             address(0x3507E0d0a6001031B0b35aB912bd5135fe5EAFA1),
             ///address(aggregatorSelection)
-            address(0x299e2c907A9f00b9a23E828765d3A8a72fbFac37)
+            address(0x299e2c907A9f00b9a23E828765d3A8a72fbFac37),
+            "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8"
         );
         console2.log("Deployed GMStorage to", address(gmStorage));
 

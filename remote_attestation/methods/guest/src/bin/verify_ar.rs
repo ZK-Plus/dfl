@@ -3,6 +3,7 @@
 
 extern crate alloc;
 
+use alloy_primitives::U256;
 use alloy_sol_types::SolValue;
 //use alloc::vec::Vec;
 use alloc::format;
@@ -162,7 +163,9 @@ fn main() {
 
     //// Write the result to the journal
     //let output: u32 = if is_valid { 1 } else { 0 };
-    let output: u32 = 1;
+    //let output: U256 = if is_valid { U256::from(1u32) } else { U256::from(0u32) };
+    //let output: u32 = 1;
+    let output: U256 = U256::from(1u32);
     env::log(format!("Output: {:?}", output).as_str());
 
     let end = env::cycle_count();
