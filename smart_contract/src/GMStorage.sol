@@ -12,6 +12,7 @@ interface IAggregatorSelection {
 contract GMStorage {
     string public globalModel;
     string public backupGlobalModel;
+    uint256 public round;
     address public device_registry_address;
     address public aggregator_selection_address;
     mapping(address => uint256) public contributions;
@@ -30,6 +31,7 @@ contract GMStorage {
         backupGlobalModel = _initial_GM_CID;
         device_registry_address = _device_registry_address;
         aggregator_selection_address = _aggregator_selection_address;
+        round = 0;
     }
 
     function setGlobalModel(string memory _newGlobalModel) external {
@@ -69,6 +71,20 @@ contract GMStorage {
             }
         }
         return false;
+    }
+
+    function incrementRound() external {
+        require(
+            IAggregatorSelection(aggregator_selection_address).isAggregator(
+                msg.sender
+            ),
+            "Caller is not an aggregator"
+        );
+        round++;
+    }
+
+    function getRound() external view returns (uint256) {
+        return round;
     }
 
     function getGlobalModel() external view returns (string memory) {

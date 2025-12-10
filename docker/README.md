@@ -9,6 +9,8 @@ Create a .env file in the same folder as the compose file with the following val
 CLIENT_LIMIT=2
 EPOCH=1
 ROUND=5
+#DOCKER=phala
+DOCKER=local
 
 # IPFS
 IPFS_PROVIDER=kubo

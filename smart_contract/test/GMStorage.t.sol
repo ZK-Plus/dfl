@@ -10,7 +10,8 @@ contract GMStorageTest is Test {
     function setUp() public {
         gmStorage = new GMStorage(
             address(0xBA874f9c3C3a68F1d196f29DFE14847590559E12),
-            address(0x7F228C96C9136311DE79dC88026FD4fA4697d638)
+            address(0x7F228C96C9136311DE79dC88026FD4fA4697d638),
+            "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8"
         );
     }
 

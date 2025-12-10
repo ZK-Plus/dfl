@@ -35,7 +35,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile_Remote_Attestation
-    image: sonak53/dfl-ra:latest
+    image: sonak53/dfl-ra:latest_9
     container_name: remote-attestation
     platform: linux/amd64
     depends_on:
@@ -52,7 +52,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile_Worker
-    image: sonak53/dfl-server-img:latest
+    image: sonak53/dfl-server-img:latest_local
     platform: linux/amd64
     depends_on:
       remote-attestation:
@@ -94,7 +94,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile_Worker
-    image: sonak53/dfl-server-img:latest
+    image: sonak53/dfl-server-img:latest_local
     platform: linux/amd64
     depends_on:
       remote-attestation:
@@ -136,7 +136,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile_Worker
-    image: sonak53/dfl-server-img:latest
+    image: sonak53/dfl-server-img:latest_local
     platform: linux/amd64
     depends_on:
       remote-attestation:

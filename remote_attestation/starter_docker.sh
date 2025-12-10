@@ -203,4 +203,4 @@ fi
 
 
 #RISC0_DEV_MODE=1 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_0 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
-RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_0 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS
+#RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key $PRIVATE_KEY_0 --rpc-url $rpc_url --contract $DEVICE_REGISTRY_ADDRESS

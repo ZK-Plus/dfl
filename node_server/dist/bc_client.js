@@ -2,6 +2,7 @@ import Web3 from "web3";
 import fs from "fs";
 import 'dotenv/config';
 // setup client´
+//const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/pFowzUSGYob62Q7i2YVsF0LFUX3WiCT2");
 const web3 = new Web3(process.env.SEPOLIA_RPC_URL);
 // define smart contract addresses
 const gm_storage_address = process.env.GM_STORAGE_ADDRESS;
@@ -84,6 +85,41 @@ export const getTopContributor = async () => {
         return result;
     });
     return topContributor;
+};
+export const getRound = async () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    const contract = new web3.eth.Contract(abi, address);
+    let round = await contract.methods.getRound().call().then((result) => {
+        return result;
+    });
+    return round;
+};
+export const incrementRound = async () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    const contract = new web3.eth.Contract(abi, address);
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await contract.methods.incrementRound().estimateGas({ from: account.address });
+    const tx = {
+        from: account.address,
+        to: address,
+        gas: gasEstimate,
+        gasPrice: gasPrice,
+        data: contract.methods.incrementRound().encodeABI(),
+    };
+    try {
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+        console.log("Transaction receipt: ", receipt);
+        return receipt;
+    }
+    catch (error) {
+        console.error("Error sending transaction: ", error);
+        throw error;
+    }
 };
 // get current state from aggregator
 export const getCurrentState = async () => {

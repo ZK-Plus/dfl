@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import child_process from 'child_process';
 import util from 'util';
-import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection} from "./bc_client.js";
+import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound} from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
 import fs from 'fs/promises';
 import { DstackClient } from '@phala/dstack-sdk';
@@ -15,7 +15,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const exePath = path.join(__dirname, '../start.exe');
 const deviceID = process.env.DEVICE_ID;
-let round = Number(process.env.ROUND ?? 1); // parse as number
+//let round = Number(process.env.ROUND ?? 1); // parse as number
 let currentState = "";
 let aggregatorProc = null;
 
@@ -34,20 +34,21 @@ async function stopAggregatorServer({ softMs = 2000 } = {}) {
         setTimeout(() => {
             if (done) return;
             try { aggregatorProc.kill('SIGKILL'); } catch {}
-            // falls exit-Event schon gekommen ist, onExit macht den Rest
         }, softMs);
     });
 }
 
 const stateMachine = async () => {
     //while (true) {
-    while (round > 0) {
+    //while (round > 0) {
+    while (Number(await getRound()) < Number(process.env.ROUND)) {
         let state = await getCurrentState();
 
         switch (state["0"]) {
             case "TRAINING":
                 if (state[1] === process.env.ACCOUNT_ADDRESS) {
                     console.log("I am the aggregator");
+                    console.log("Round %d.", Number(await getRound()));
                     console.log("Starting the zerompq server ...");
                     try {
                         if (!aggregatorProc) {
@@ -69,10 +70,10 @@ const stateMachine = async () => {
                     }
                 } else {
                     console.log("I am not the aggregator");
+                    console.log("Round %d.", Number(await getRound()));
                     console.log("Fetching the global model from IPFS ...");
                     await getCurrentModel();
 
-                    // Merke aktuellen GM-CID als Referenz für das "Signal" des Aggregators
                     const prevGM = await getCurrentGM();
 
                     console.log("Starting local training ...");
@@ -94,7 +95,6 @@ const stateMachine = async () => {
                         console.log("Fetching TDX Quote ...");
                         // Create client - automatically connects to /var/run/dstack.sock
                         const client = new DstackClient();
-                        // For local development with simulator     
                         const devClient = new DstackClient('http://localhost:8090');
 
                         // Get TEE instance information
@@ -130,7 +130,7 @@ const stateMachine = async () => {
                     }
                     console.log("Top contributor:", await getTopContributor());
                     console.log("Transfer complete. Send local model to aggregator.");
-                    console.log("Rounds %d left.", round);
+                    console.log("Rounds left: ", (Number(process.env.ROUND) - Number(await getRound())));
                     console.log("Waiting till next round.");
                     try {
                         const newGM = await waitForGMUpdate(prevGM, { pollMs: 5000, timeoutMs: 30 * 1000 });
@@ -181,7 +181,6 @@ const stateMachine = async () => {
                         }
                     } catch (e) {
                         console.error("Error during aggregation:", e);
-                        // nicht beenden – nächster Loop
                         await sleep(2000);
                         continue;
                     }
@@ -207,8 +206,8 @@ const stateMachine = async () => {
                     console.log("Current Global Model:", await getCurrentGM());
                     await stageCleaning();
                     console.log("Passed cleaning");
-                    round--;
-                    console.log("Rounds left: ", round);
+                    await incrementRound();
+                    console.log("Rounds left: ", (Number(process.env.ROUND) - Number(await getRound())));
                     await setCurrentState("TRAINING");
                     console.log("Set state to TRAINING for next round");
                     await triggerAggregatorSelection();

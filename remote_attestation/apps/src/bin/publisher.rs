@@ -17,6 +17,7 @@
 // to your deployed app contract.
 
 use alloy_primitives::{U256};
+//use alloy_sol_types::{sol, SolInterface, SolValue};
 use anyhow::{Context, Result};
 use clap::Parser;
 use ethers::prelude::*;
@@ -24,8 +25,13 @@ use methods::VERIFY_AR_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
 use hex;
-use alloy_sol_types::{sol, SolCall, SolInterface};
+use alloy_sol_types::{sol, SolCall};
+
 use std::fs;
+//use pem::parse;
+//use serde::{Serialize, Deserialize};
+//use tracing_subscriber;
+//use std::env;
 
 // `IEvenNumber` interface automatically generated via the alloy `sol!` macro.
 sol! {
@@ -136,76 +142,56 @@ fn main() -> Result<()> {
     let attestation_report_quote = hex::decode(attestation_report_quote_hex.trim())
         .context("Failed to decode hex string from phala_tdx_quote")?;
 
-    log::info!("Attestation quote size: {} bytes", attestation_report_quote.len());
-
     let env = ExecutorEnv::builder()
         .write(&attestation_report_quote)?
         .build()?;
 
-    // Erst STARK-Proof generieren
-    log::info!("Starting STARK proving...");
-    let stark_receipt = default_prover()
-        .prove_with_ctx(
-            env,
-            &VerifierContext::default(),
-            VERIFY_AR_ELF,
-            &ProverOpts::default(), // STARK
-        )?
-        .receipt;
+    log::info!("Starting Groth16 proving via Docker...");
+    let prover_result = default_prover().prove_with_ctx(
+        env,
+        &VerifierContext::default(),
+        VERIFY_AR_ELF,
+        &ProverOpts::groth16(),
+    );
 
-    log::info!("STARK proving succeeded, converting to Groth16...");
-
-    // STARK → Groth16 Konvertierung via HTTP-Service
-    let client = reqwest::blocking::Client::new();
-    let prover_url = std::env::var("RISC0_GROTH16_PROVER_URL")
-        .unwrap_or_else(|_| "http://risc0-groth16-prover:8080".to_string());
-
-    log::info!("Sending STARK receipt to Groth16 service at {}", prover_url);
-    
-    let stark_receipt_bytes = bincode::serialize(&stark_receipt)?;
-    
-    let response = client
-        .post(format!("{}/prove", prover_url))
-        .body(stark_receipt_bytes)
-        .send()
-        .context("Failed to connect to Groth16 prover service")?;
-
-    if !response.status().is_success() {
-        anyhow::bail!("Groth16 service returned error: {}", response.status());
-    }
-
-    let groth16_receipt_bytes = response.bytes()?;
-    let receipt: risc0_zkvm::Receipt = bincode::deserialize(&groth16_receipt_bytes)?;
-
-    log::info!("Groth16 proving succeeded via external service.");
+    let receipt = match prover_result {
+        Ok(r) => {
+            log::info!("Groth16 proving succeeded.");
+            r.receipt
+        }
+        Err(e) => {
+            log::error!("Groth16 prover failed: {e}");
+            return Err(e.into());
+        }
+    };
 
     let groth16_seal = receipt
         .inner
         .groth16()
-        .context("Receipt is not a Groth16 receipt")?;
+        .context("Receipt is not a Groth16 receipt (no Groth16 seal present)")?;
 
     let seal_bytes = groth16::encode(groth16_seal.seal.clone())
-        .context("Failed to encode Groth16 seal")?;
+        .context("Failed to RLP-encode Groth16 seal")?;
 
     let journal = receipt.journal.bytes.clone();
-    let x = U256::from_be_slice(&journal);
+
+     let x = U256::from_be_slice(&journal);
 
     log::info!("Journal value x = {x}");
 
-    let calldata = IDeviceRegistry::IDeviceRegistryCalls::registerDevice(
-        IDeviceRegistry::registerDeviceCall {
-            x,
-            seal: seal_bytes.into(),
-            _address: "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512".parse().unwrap(),
-            _public_ip: "0x90F79bf6EB2c4f870365E785982E1f101E93b906".to_string(),
-            _msg_broker_ip: "https://7767843ff35bc83acc5cabb9b6d843672a5432f8-8090.dstack-pha-prod7.phala.network".to_string(),
-            _public_key: public_key_pem.into_bytes().into(),
-        },
-    )
+    let calldata = IDeviceRegistry::registerDeviceCall {
+        x,
+        seal: seal_bytes.into(),
+        _address: "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512".parse().unwrap(),
+        _public_ip: "0x90F79bf6EB2c4f870365E785982E1f101E93b906".to_string(), 
+        _msg_broker_ip: "https://7767843ff35bc83acc5cabb9b6d843672a5432f8-8090.dstack-pha-prod7.phala.network".to_string(),
+        _public_key: public_key_pem.into_bytes().into(),
+    }
     .abi_encode();
 
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(tx_sender.send(calldata))?;
+    let rt = tokio::runtime::Runtime::new()?;
+    let receipt = rt.block_on(tx_sender.send(calldata))?;
+    log::info!("Tx sent. Receipt: {receipt:?}");
 
     Ok(())
 }
