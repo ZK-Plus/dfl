@@ -17,7 +17,7 @@
 // to your deployed app contract.
 
 use alloy_primitives::{U256};
-//use alloy_sol_types::{sol, SolInterface, SolValue};
+use alloy_sol_types::{sol, SolInterface, SolValue};
 use anyhow::{Context, Result};
 use clap::Parser;
 use ethers::prelude::*;
@@ -25,15 +25,8 @@ use methods::VERIFY_AR_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
 use hex;
-use alloy_sol_types::{sol, SolCall};
-
 use std::fs;
-//use pem::parse;
-//use serde::{Serialize, Deserialize};
-//use tracing_subscriber;
-//use std::env;
 
-// `IEvenNumber` interface automatically generated via the alloy `sol!` macro.
 sol! {
     interface IDeviceRegistry {
         function registerDevice(
@@ -48,8 +41,6 @@ sol! {
     }
 }
 
-/// Wrapper of a `SignerMiddleware` client to send transactions to the given
-/// contract's `Address`.
 pub struct TxSender {
     chain_id: u64,
     client: SignerMiddleware<Provider<Http>, Wallet<k256::ecdsa::SigningKey>>,
@@ -57,7 +48,6 @@ pub struct TxSender {
 }
 
 impl TxSender {
-    /// Creates a new `TxSender`.
     pub fn new(chain_id: u64, rpc_url: &str, private_key: &str, contract: &str) -> Result<Self> {
         let provider = Provider::<Http>::try_from(rpc_url)?;
         let wallet: LocalWallet = private_key.parse::<LocalWallet>()?.with_chain_id(chain_id);
@@ -71,7 +61,6 @@ impl TxSender {
         })
     }
 
-    /// Send a transaction with the given calldata.
     pub async fn send(&self, calldata: Vec<u8>) -> Result<Option<TransactionReceipt>> {
         let tx = TransactionRequest::new()
             .chain_id(self.chain_id)
@@ -89,39 +78,24 @@ impl TxSender {
     }
 }
 
-/// Arguments of the publisher CLI.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// Ethereum chain ID
     #[clap(long)]
     chain_id: u64,
 
-    /// Ethereum Node endpoint.
     #[clap(long, env)]
     eth_wallet_private_key: String,
 
-    /// Ethereum Node endpoint.
     #[clap(long)]
     rpc_url: String,
 
-    /// Application's contract address on Ethereum
     #[clap(long)]
     contract: String,
 }
 
-/* This is for ARMs Remote Attestation.
-/// Input data for the zkVM proof request.
-#[derive(Serialize, Deserialize)]
-struct InputData {
-    vcek: Vec<u8>,
-    cert_chain: Vec<u8>,
-    public_key: Vec<u8>,
-}*/
-
 fn main() -> Result<()> {
     env_logger::init();
-
     let args = Args::parse();
 
     let tx_sender = TxSender::new(
@@ -131,67 +105,74 @@ fn main() -> Result<()> {
         &args.contract,
     )?;
 
-    let attestation_report_quote_hex =
-        fs::read_to_string("./apps/data/phala_tdx_quote")
-            .context("Unable to read phala_tdx_quote")?;
+    let attestation_report_quote_hex = fs::read_to_string("./apps/data/phala_tdx_quote").expect("Unable to read phala_tdx_quote");
+    let public_key = fs::read_to_string("./apps/data/public_key.pem").expect("Unable to read public_key.pem");
 
-    let public_key_pem =
-        fs::read_to_string("./apps/data/public_key.pem")
-            .context("Unable to read public_key.pem")?;
-
-    let attestation_report_quote = hex::decode(attestation_report_quote_hex.trim())
-        .context("Failed to decode hex string from phala_tdx_quote")?;
+    let attestation_report_quote = hex::decode(attestation_report_quote_hex.trim()).expect("Failed to decode hex string");
 
     let env = ExecutorEnv::builder()
         .write(&attestation_report_quote)?
+        .stdout(std::io::stdout())
+        .stderr(std::io::stderr())
         .build()?;
 
-    log::info!("Starting Groth16 proving via Docker...");
-    let prover_result = default_prover().prove_with_ctx(
-        env,
-        &VerifierContext::default(),
-        VERIFY_AR_ELF,
-        &ProverOpts::groth16(),
-    );
+    log::info!("Executing proof request...");
 
-    let receipt = match prover_result {
-        Ok(r) => {
-            log::info!("Groth16 proving succeeded.");
-            r.receipt
-        }
-        Err(e) => {
-            log::error!("Groth16 prover failed: {e}");
-            return Err(e.into());
-        }
-    };
+    // Reduce memory usage by forcing single-threaded proving
+    //std::env::set_var("RAYON_NUM_THREADS", "1");
 
-    let groth16_seal = receipt
-        .inner
-        .groth16()
-        .context("Receipt is not a Groth16 receipt (no Groth16 seal present)")?;
+    let start = std::time::Instant::now();
 
-    let seal_bytes = groth16::encode(groth16_seal.seal.clone())
-        .context("Failed to RLP-encode Groth16 seal")?;
+
+    let receipt = default_prover()
+        .prove_with_ctx(
+            env,
+            &VerifierContext::default(),
+            VERIFY_AR_ELF,
+            &ProverOpts::groth16(),
+        )?
+        .receipt;
+
+    log::info!("Proof request executed successfully.");
+    let end = std::time::Instant::now();
+
+    let seal = groth16::encode(receipt.inner.groth16()?.seal.clone())?;
 
     let journal = receipt.journal.bytes.clone();
 
-     let x = U256::from_be_slice(&journal);
+    log::info!("Journal size: {}", receipt.journal.bytes.len());
+    log::info!("Seal size: {}", seal.len());
 
-    log::info!("Journal value x = {x}");
+    let x = U256::abi_decode(&journal, true).context("decoding journal data")?;
 
-    let calldata = IDeviceRegistry::registerDeviceCall {
-        x,
-        seal: seal_bytes.into(),
-        _address: "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512".parse().unwrap(),
-        _public_ip: "0x90F79bf6EB2c4f870365E785982E1f101E93b906".to_string(), 
-        _msg_broker_ip: "https://7767843ff35bc83acc5cabb9b6d843672a5432f8-8090.dstack-pha-prod7.phala.network".to_string(),
-        _public_key: public_key_pem.into_bytes().into(),
-    }
+    log::info!("Verification result: {}", x);
+
+    let execution_time = end.duration_since(start).as_secs_f64();
+    log::info!("Execution time: {:.2} seconds", execution_time);
+
+    log::info!("Sending transaction to contract...");
+
+
+    let calldata = IDeviceRegistry::IDeviceRegistryCalls::registerDevice(
+        IDeviceRegistry::registerDeviceCall {
+            x,
+            seal: seal.into(), // was seal_bytes.into()
+            _address: "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512".parse().unwrap(),
+            _public_ip: "0x90F79bf6EB2c4f870365E785982E1f101E93b906".to_string(),
+            _msg_broker_ip: "https://7767843ff35bc83acc5cabb9b6d843672a5432f8-8090.dstack-pha-prod7.phala.network".to_string(),
+            _public_key: public_key.into_bytes().into(),
+    )
     .abi_encode();
+    
+    //let calldata = IDeviceRegistry::IDeviceRegistryCalls::runProof(IDeviceRegistry::runProofCall {
+    //    seal: seal.into(),
+    //    x,
+    //})
+    //.abi_encode();
 
-    let rt = tokio::runtime::Runtime::new()?;
-    let receipt = rt.block_on(tx_sender.send(calldata))?;
-    log::info!("Tx sent. Receipt: {receipt:?}");
+    let runtime = tokio::runtime::Runtime::new()?;
+
+    runtime.block_on(tx_sender.send(calldata))?;
 
     Ok(())
 }

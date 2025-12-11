@@ -18,6 +18,8 @@ const deviceID = process.env.DEVICE_ID;
 //let round = Number(process.env.ROUND ?? 1); // parse as number
 let currentState = "";
 let aggregatorProc = null;
+const rsaPublicKey = process.env.RSA_PUBLIC_KEY.replace(/\\n/g, '\n') || "";
+const rsaPrivateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n') || "";
 
 async function stopAggregatorServer({ softMs = 2000 } = {}) {
     if (!aggregatorProc) return;
