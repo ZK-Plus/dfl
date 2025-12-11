@@ -201,3 +201,12 @@ For SNARK proof generation without Bonsai use the following line in the remote_a
 RUST_LOG=debug RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url https://61ecc557e3b36593390057d322d46e9488032c34-8545.dstack-prod5.phala.network --contract 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
 
 ```
+curl -L https://risczero.com/install | bash && \
+rzup install rust 1.85.0 && \
+rzup install cpp 2024.1.5 && \
+rzup install r0vm 2.3.0 && \
+rzup install cargo-risczero 2.3.0 && \
+rzup default r0vm 2.3.0
+```
+
+```
