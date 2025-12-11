@@ -194,3 +194,10 @@ Below are the primary files in the project directory
 [zkVM program]: ./methods/guest/
 [steel-repo]: https://github.com/risc0/risc0-ethereum/tree/main/steel
 [erc20-counter]: https://github.com/risc0/risc0-ethereum/tree/main/examples/erc20-counter
+
+For SNARK proof generation without Bonsai use the following line in the remote_attestation folder. Make sure to have Docker running on a Linux machine with x86 archtecture. If you get Docker Errors Some(0) or Some(125) make sure you are running the code on bare metal. Also contact me if the phala link is offline.
+
+```
+RUST_LOG=debug RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url https://61ecc557e3b36593390057d322d46e9488032c34-8545.dstack-prod5.phala.network --contract 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
+
+```

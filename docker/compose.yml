@@ -77,6 +77,8 @@ services:
       ACCOUNT_ADDRESS: ${W0_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W0_PRIVATE_KEY}
       DEVICE_ID: ${W0_DEVICE_ID}
+      RSA_PRIVATE_KEY: ${W0_RSA_PRIVATE_KEY}
+      RSA_PUBLIC_KEY: ${W0_RSA_PUBLIC_KEY}
     #volumes:
     #  - .cloud_setup/ansible/config/training_data/train-images-0.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
     #  - .cloud_setup/ansible/config/training_data/train-labels-0.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
@@ -119,6 +121,8 @@ services:
       ACCOUNT_ADDRESS: ${W1_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W1_PRIVATE_KEY}
       DEVICE_ID: ${W1_DEVICE_ID}
+      RSA_PRIVATE_KEY: ${W1_RSA_PRIVATE_KEY}
+      RSA_PUBLIC_KEY: ${W1_RSA_PUBLIC_KEY}
     #volumes:
     #  - .cloud_setup/ansible/config/training_data/train-images-1.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
     #  - .cloud_setup/ansible/config/training_data/train-labels-1.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
@@ -161,6 +165,8 @@ services:
       ACCOUNT_ADDRESS: ${W2_ACCOUNT_ADDRESS}
       PRIVATE_KEY: ${W2_PRIVATE_KEY}
       DEVICE_ID: ${W2_DEVICE_ID}
+      RSA_PRIVATE_KEY: ${W2_RSA_PRIVATE_KEY}
+      RSA_PUBLIC_KEY: ${W2_RSA_PUBLIC_KEY}
     #volumes:
     #  - .cloud_setup/ansible/config/training_data/train-images-2.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
     #  - .cloud_setup/ansible/config/training_data/train-labels-2.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
@@ -203,6 +209,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W3_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W3_PRIVATE_KEY}
   #     DEVICE_ID: ${W3_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W3_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W3_RSA_PUBLIC_KEY}
   #   #volumes:
   #   #  - .cloud_setup/ansible/config/training_data/train-images-3.idx3-ubyte:/dfl/node_server/data/train-images.idx3-ubyte
   #   #  - .cloud_setup/ansible/config/training_data/train-labels-3.idx1-ubyte:/dfl/node_server/data/train-labels.idx1-ubyte
@@ -246,6 +254,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W4_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W4_PRIVATE_KEY}
   #     DEVICE_ID: ${W4_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W4_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W4_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #     cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -284,6 +294,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W5_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W5_PRIVATE_KEY}
   #     DEVICE_ID: ${W5_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W5_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W5_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-1.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-1.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -321,6 +333,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W6_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W6_PRIVATE_KEY}
   #     DEVICE_ID: ${W6_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W6_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W6_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-2.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #     cp /dfl/config/training_data/train-labels-2.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #     cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -359,6 +373,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W7_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W7_PRIVATE_KEY}
   #     DEVICE_ID: ${W7_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W7_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W7_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-3.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-3.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -396,6 +412,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W8_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W8_PRIVATE_KEY}
   #     DEVICE_ID: ${W8_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W8_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W8_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -433,6 +451,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W9_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W9_PRIVATE_KEY}
   #     DEVICE_ID: ${W9_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W9_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W9_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-1.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-1.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -471,6 +491,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W10_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W10_PRIVATE_KEY}
   #     DEVICE_ID: ${W10_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W10_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W10_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-2.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #     cp /dfl/config/training_data/train-labels-2.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #     cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -508,6 +530,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W11_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W11_PRIVATE_KEY}
   #     DEVICE_ID: ${W11_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W11_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W11_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-3.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-3.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -545,6 +569,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W12_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W12_PRIVATE_KEY}
   #     DEVICE_ID: ${W12_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W12_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W12_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -582,6 +608,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W13_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W13_PRIVATE_KEY}
   #     DEVICE_ID: ${W13_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W13_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W13_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-1.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-1.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -619,6 +647,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W14_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W14_PRIVATE_KEY}
   #     DEVICE_ID: ${W14_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W14_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W14_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-2.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #     cp /dfl/config/training_data/train-labels-2.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #     cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -656,6 +686,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W15_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W15_PRIVATE_KEY}
   #     DEVICE_ID: ${W15_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W15_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W15_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-3.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-3.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -693,6 +725,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W16_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W16_PRIVATE_KEY}
   #     DEVICE_ID: ${W16_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W16_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W16_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-0.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-0.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -730,6 +764,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W17_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W17_PRIVATE_KEY}
   #     DEVICE_ID: ${W17_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W17_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W17_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-1.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-1.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -767,6 +803,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W18_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W18_PRIVATE_KEY}
   #     DEVICE_ID: ${W18_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W18_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W18_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-2.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #     cp /dfl/config/training_data/train-labels-2.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #     cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
@@ -804,6 +842,8 @@ services:
   #     ACCOUNT_ADDRESS: ${W19_ACCOUNT_ADDRESS}
   #     PRIVATE_KEY: ${W19_PRIVATE_KEY}
   #     DEVICE_ID: ${W19_DEVICE_ID}
+  #     RSA_PRIVATE_KEY: ${W19_RSA_PRIVATE_KEY}
+  #     RSA_PUBLIC_KEY: ${W19_RSA_PUBLIC_KEY}
   #   command: ["/bin/sh", "-c", "cp /dfl/config/training_data/train-images-3.idx3-ubyte /dfl/node_server/data/train-images.idx3-ubyte && \
   #       cp /dfl/config/training_data/train-labels-3.idx1-ubyte /dfl/node_server/data/train-labels.idx1-ubyte && \
   #       cp /dfl/config/test_data/t10k-images.idx3-ubyte /dfl/node_server/data/t10k-images.idx3-ubyte && \
