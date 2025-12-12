@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import child_process from 'child_process';
 import util from 'util';
-import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound} from "./bc_client.js";
+import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized} from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
 import fs from 'fs/promises';
 import { DstackClient } from '@phala/dstack-sdk';
@@ -41,8 +41,6 @@ async function stopAggregatorServer({ softMs = 2000 } = {}) {
 }
 
 const stateMachine = async () => {
-    //while (true) {
-    //while (round > 0) {
     while (Number(await getRound()) < Number(process.env.ROUND)) {
         let state = await getCurrentState();
 
@@ -117,7 +115,10 @@ const stateMachine = async () => {
                         console.log('TDX Quote:', quote.quote);
 
                     }
-
+                    // Should this be done here?
+                    //if (await !isAuthorized(process.env.ACCOUNT_ADDRESS))
+                    //    return console.error("This device is not authorized to participate in training.");
+                    console.log("Is the device authorized? ", await isAuthorized(process.env.ACCOUNT_ADDRESS));
                     console.log("Starting the zerompq client ...");
                     try {
                         const { stdout, stderr } = await trainingProcess(exePath, ["client", String(state["1"]), String(deviceID)]);

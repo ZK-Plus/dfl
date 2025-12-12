@@ -218,4 +218,13 @@ export const triggerAggregatorSelection = async () => {
         console.error("Error sending transaction: ", error);
         throw error;
     }
+    
 };
+// check if an address is authorized
+export const isAuthorized = async (address) => {
+    const abi = JSON.parse(fs.readFileSync("./abi/registry.json", "utf-8"));
+    const contract = new web3.eth.Contract(abi, device_registry_address);
+    const result = await contract.methods.isAuthorized(address).call();
+    return result;
+};
+
