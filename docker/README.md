@@ -1,6 +1,9 @@
-# Instructions
 
+# How to use the MVP with Docker
 
+You need atleast a .env File as showen below and the [compose](.compose.yml) file. You can clone the DFL project as well and compile the Docker images yourself. 
+
+## Manditory .env file
 
 Create a .env file in the same folder as the compose file with the following values. 
 
@@ -46,6 +49,60 @@ W3_DEVICE_ID= 3
 
 ```
 
+# Overview of the Docker files
+
+## The main compose file
+
+For denmonstration pourposes we recomend the main [compose](.compose.yml) file. It will start the following services.
+
+- A local Blockchain (Anvil with 20 Accounts)
+- A local IPFS Service (Kubo)
+- Deploy the Smart contracts (Foundry in the Remote Attestation Project) 
+- Workers 0 to 2
+
+Be sure to have Docker Desktop running.
+
+Either clone the DFL project if you want to compile the files yourself and from DFL/ then run 
+
+```
+docker compose -f docker/compose.yml up --build
+```
+
+or just copy the main [compose](.compose.yml) file and create the .env file in the same folder. 
+
+## The remote attestation compose file
+
+It will start the following services.
+
+- Deploy the Smart contracts (Foundry in the Remote Attestation Project) 
+- Generate the SNARK (not supported).
+
+This [Remote Attestation Compose](.compose_ra.yml) file is for smart contract deployment by the foundry framework or for test purposes, since the STARK to SNARK conversation only works on x86 Machines not inside Docker Containers.
+
+Be sure to have Docker Desktop running.
+
+Either clone the DFL project if you want to compile the files yourself and from DFL/ then run 
+
+```
+docker compose -f docker/compose_ra.yml up --build
+```
+
+## The compiler compose file
+
+This [Compiler Compose](.compiler_compose.yml) file builds the neural network code .exe file, since it is written in c++.
+
+Be sure to have Docker Desktop running.
+
+Clone the DFL project first and from DFL/ then run 
+
+```
+docker compose -f docker/compiler_compose.yml up --build
+```
+
+
+
+# Optional 
+
 If you wish to use [pinata](https://pinata.cloud/) instead of a local [Kubo](https://github.com/ipfs/kubo) IPFS node replace the dummy credentials with your own. Upload the initial global model in IPFS usind the Add function in FILES from [pinata](https://pinata.cloud/). Choose FILE UPLOAD and the Initial_GM file in this folder, then repace the INITIAL_GM_CID with your new CID. 
 
 ```
@@ -58,19 +115,7 @@ INITIAL_GM_CID=bafxxxxx...
 IPFS_PROVIDER=pinata
 ```
 
-Be sure to have Docker Desktop running.
-
-From DFL/ then run 
-
-```
-docker compose -f docker/compose.yml up --build
-```
-
-Or, from DFL/docker/ run 
-
-```
-docker compose -f compose.yml up --build
-```
+## Helpfull commands
 
 Open Kubu Web UI
 
@@ -81,4 +126,23 @@ http://127.0.0.1:5001/ipfs/bafybeifplj2s3yegn7ko7tdnwpoxa4c5uaqnk2ajnw5geqm34slc
 Check current IPFS CID in GM Contract from a new console
 ```
 cast call "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" "globalModel()(string)" --rpc-url http://localhost:8545
+```
+
+
+Build a local Docker image
+
+```
+docker build --platform linux/amd64 -f docker/Dockerfile -t docker_hub_nickname/project_name:latest .
+```
+
+Push the local Docker image to Docker Hub
+
+```
+docker push docker_hub_nickname/project_name:latest && docker push docker_hub_nickname/project_name:latest
+```
+
+Delete all Docker files
+
+```
+docker system prune -a --volumes
 ```

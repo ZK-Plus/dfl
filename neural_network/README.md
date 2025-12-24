@@ -13,3 +13,33 @@ This repository contains the backbone for a federated learning system. It builds
 - **ZeroMQ Communication**: Utilizes ZeroMQ as a message broker for efficient communication between nodes.
 
 This project builds on the [Digit-Recognition](https://github.com/Mimsqueeze/Digit-Recognition) repository. Special thanks to the original authors for their work.
+
+## Neural Network calls for local use
+
+Change into the neural_network folder.
+
+To simulate 3 rounds of training the federated averag.
+
+```
+./start.exe simulate
+```
+To train one round.
+```
+./start.exe train 30 
+```
+To start the zerompq server.
+```
+./start.exe server
+```
+To start the clients.
+```
+./start.exe client * 1
+```
+To calculate the federated average.
+```
+./start.exe aggregate 3
+```
+
+### Functionality of the neural network
+- AES global model encryption and decryption is simulated
+- RSA signature verification with SHA 256, all clients sign with the same key

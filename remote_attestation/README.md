@@ -10,7 +10,7 @@ Integrate with [Steel][steel-repo] to execute view calls and simulate transactio
 
 Prove computation with the [RISC Zero zkVM] and verify the results in your Ethereum contract.
 
-## Overview
+## Overview (Bonsai Registration is Depricated)
 
 Here is a simplified overview of how devs can integrate RISC Zero, with [Bonsai] proving, into their Ethereum smart contracts:
 
@@ -21,47 +21,60 @@ Here is a simplified overview of how devs can integrate RISC Zero, with [Bonsai]
 3. The [publisher] app submits this proof and journal on-chain to your app contract for validation.
 4. Your app contract calls the [RISC Zero Verifier] to validate the proof. If the verification is successful, the journal is deemed trustworthy and can be safely used.
 
-## Dependencies
+## Local Setup Remote Attestation (SNARK generation only will work on Linux x86, else Docker Some Error(0) or Docker Some Error(125).)
 
-First, [install Rust] and [Foundry], and then restart your terminal.
+First, install Rust and Foundry, and then restart your terminal.
 
-```sh
-# Install Rust
-curl https://sh.rustup.rs -sSf | sh
-# Install Foundry
-curl -L https://foundry.paradigm.xyz | bash
+
+### Install Rust on Linux/Mac
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh                
+```
+Load it oder restart your terminal.
+```
+source $HOME/.cargo/env
+```
+### Install rics zero on Linux/Mac
+```
+curl -L https://risczero.com/install | bash
+rzup install rust 1.85.0
+rzup install cpp 2024.1.5
+rzup install rust r0vm 2.3.0
+rzup install rust cargo-risczero 2.3.0
+rzup install rust r0vm 2.3.0
+ENV PATH="/root/.risc0/bin:${PATH}"
 ```
 
-Next, you will need to install the `cargo risczero` tool.
-We'll use [`cargo binstall`][cargo-binstall] to get `cargo-risczero` installed, and then install the `risc0` toolchain.
-See [RISC Zero installation] for more details.
-
-```sh
-cargo install cargo-binstall
-cargo binstall cargo-risczero
-cargo risczero install
+### Install Foundry Toolbox (Anvil included) on Linux/Mac
+``` 
+curl -L https://foundry.paradigm.xyz | bash
+ENV PATH="/root/.foundry/bin:/root/.risc0/bin:${PATH}"
+```
+```
+foundryup
+```
+### Start a private test blockchain with 
+```
+anvil
 ```
 
 Now you have all the tools you need to develop and deploy an application with [RISC Zero].
 
 ## Quick Start
 
-First, install the RISC Zero toolchain using the [instructions above](#dependencies).
+First, install the RISC Zero toolchain using the instructions above.
 
-Now, you can initialize a new RISC Zero project at a location of your choosing:
+- Build your Solidity smart contracts and publish them on the Blockchain.
 
-```sh
-forge init -t risc0/bonsai-foundry-template ./my-project
+  ```sh
+  starter_docker.sh
+  ```
+
+# Example Call local Remote Attestation and RPC on Phala
+
 ```
-
-Congratulations! You've just started your first RISC Zero project.
-
-Your new project consists of:
-
-- a [zkVM program] (written in Rust), which specifies a computation that will be proven;
-- a [app contract] (written in Solidity), which uses the proven results;
-- a [publisher] which makes proving requests to [Bonsai] and posts the proof to Ethereum.
-  We provide an example implementation, but your dApp interface or application servers could act as the publisher.
+RUST_LOG=debug RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url https://61ecc557e3b36593390057d322d46e9488032c34-8545.dstack-prod5.phala.network --contract 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
+```
 
 ### Build the Code
 
@@ -71,13 +84,7 @@ Your new project consists of:
   cargo build
   ```
 
-- Build your Solidity smart contracts
 
-  > NOTE: `cargo build` needs to run first to generate the `ImageID.sol` contract.
-
-  ```sh
-  forge build
-  ```
 
 ### Run the Tests
 
@@ -196,17 +203,3 @@ Below are the primary files in the project directory
 [erc20-counter]: https://github.com/risc0/risc0-ethereum/tree/main/examples/erc20-counter
 
 For SNARK proof generation without Bonsai use the following line in the remote_attestation folder. Make sure to have Docker running on a Linux machine with x86 archtecture. If you get Docker Errors Some(0) or Some(125) make sure you are running the code on bare metal. Also contact me if the phala link is offline.
-
-```
-RUST_LOG=debug RISC0_DEV_MODE=0 cargo run -- --chain-id 31337 --eth-wallet-private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url https://61ecc557e3b36593390057d322d46e9488032c34-8545.dstack-prod5.phala.network --contract 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
-
-```
-curl -L https://risczero.com/install | bash && \
-rzup install rust 1.85.0 && \
-rzup install cpp 2024.1.5 && \
-rzup install r0vm 2.3.0 && \
-rzup install cargo-risczero 2.3.0 && \
-rzup default r0vm 2.3.0
-```
-
-```
