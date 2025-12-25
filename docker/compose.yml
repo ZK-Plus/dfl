@@ -30,23 +30,37 @@ services:
       - "127.0.0.1:8080:8080"
     tmpfs:
       - /data/ipfs
-
-  remote-attestation: 
+  
+  smart-contracts: 
     build:
       context: ..
-      dockerfile: docker/Dockerfile_Remote_Attestation
-    image: sonak53/dfl-ra:latest_10
-    container_name: remote-attestation
-    platform: linux/amd64
-    depends_on:
-      anvil:
-        condition: service_healthy
+      dockerfile: docker/Dockerfile_Smart_Contracts
+    image: sonak53/dfl-sc:latest
+    container_name: smart-contracts
+    platform: linux/amd64  
     environment:
       FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
       IPFS_PROVIDER: ${IPFS_PROVIDER}
       DOCKER: ${DOCKER}
       INITIAL_GM_CID: ${INITIAL_GM_CID}
     command: ["/dfl/remote_attestation/starter_docker.sh"]
+
+  #remote-attestation: 
+  #  build:
+  #    context: ..
+  #    dockerfile: docker/Dockerfile_Remote_Attestation
+  #  image: sonak53/dfl-ra:latest_10
+  #  container_name: remote-attestation
+  #  platform: linux/amd64
+  #  depends_on:
+  #    anvil:
+  #      condition: service_healthy
+  #  environment:
+  #    FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
+  #    IPFS_PROVIDER: ${IPFS_PROVIDER}
+  #    DOCKER: ${DOCKER}
+  #    INITIAL_GM_CID: ${INITIAL_GM_CID}
+  #  command: ["/dfl/remote_attestation/starter_docker.sh"]
 
   VM-0:
     build:
@@ -55,7 +69,8 @@ services:
     image: sonak53/dfl-server-img:latest_local
     platform: linux/amd64
     depends_on:
-      remote-attestation:
+      #remote-attestation:
+      smart-contracts:
         condition: service_completed_successfully
     container_name: ${W0_ACCOUNT_ADDRESS}
     environment:
@@ -99,7 +114,8 @@ services:
     image: sonak53/dfl-server-img:latest_local
     platform: linux/amd64
     depends_on:
-      remote-attestation:
+      #remote-attestation:
+      smart-contracts:
         condition: service_completed_successfully
     container_name: ${W1_ACCOUNT_ADDRESS}
     environment:
@@ -143,7 +159,8 @@ services:
     image: sonak53/dfl-server-img:latest_local
     platform: linux/amd64
     depends_on:
-      remote-attestation:
+      #remote-attestation:
+      smart-contracts:
         condition: service_completed_successfully
     container_name: ${W2_ACCOUNT_ADDRESS}
     environment:
@@ -187,7 +204,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W3_ACCOUNT_ADDRESS}
   #   environment:
@@ -232,7 +250,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W4_ACCOUNT_ADDRESS}
   #   environment:
@@ -272,7 +291,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W5_ACCOUNT_ADDRESS}
   #   environment:
@@ -311,7 +331,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W6_ACCOUNT_ADDRESS}
   #   environment:
@@ -351,7 +372,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W7_ACCOUNT_ADDRESS}
   #   environment:
@@ -390,7 +412,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W8_ACCOUNT_ADDRESS}
   #   environment:
@@ -429,7 +452,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W9_ACCOUNT_ADDRESS}
   #   environment:
@@ -469,7 +493,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W10_ACCOUNT_ADDRESS}
   #   environment:
@@ -508,7 +533,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W11_ACCOUNT_ADDRESS}
   #   environment:
@@ -547,7 +573,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W12_ACCOUNT_ADDRESS}
   #   environment:
@@ -586,7 +613,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W13_ACCOUNT_ADDRESS}
   #   environment:
@@ -625,7 +653,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W14_ACCOUNT_ADDRESS}
   #   environment:
@@ -664,7 +693,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W15_ACCOUNT_ADDRESS}
   #   environment:
@@ -703,7 +733,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W16_ACCOUNT_ADDRESS}
   #   environment:
@@ -742,7 +773,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W17_ACCOUNT_ADDRESS}
   #   environment:
@@ -781,7 +813,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W18_ACCOUNT_ADDRESS}
   #   environment:
@@ -820,7 +853,8 @@ services:
   #   image: sonak53/dfl-server-img:latest
   #   platform: linux/amd64
   #   depends_on:
-  #     remote-attestation:
+  #     #remote-attestation:
+  #     smart-contracts:
   #       condition: service_completed_successfully
   #   container_name: ${W19_ACCOUNT_ADDRESS}
   #   environment:

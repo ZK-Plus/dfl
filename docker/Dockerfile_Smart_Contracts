@@ -1,0 +1,37 @@
+FROM rust:1.87-slim
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    pkg-config \
+    curl \
+    git \
+    bash \
+    ca-certificates \
+    cmake \
+    jq \
+    docker.io \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+
+RUN curl -L https://foundry.paradigm.xyz | bash && \
+    /root/.foundry/bin/foundryup && \
+    /root/.foundry/bin/forge --version
+
+ENV PATH="/root/.foundry/bin:/root/.risc0/bin:${PATH}"
+
+
+WORKDIR /dfl
+COPY smart_contract ./smart_contract
+COPY remote_attestation/foundry.toml ./remote_attestation/foundry.toml
+COPY remote_attestation/remappings.txt ./remote_attestation/remappings.txt
+COPY remote_attestation/lib ./remote_attestation/lib
+COPY remote_attestation/broadcast ./remote_attestation/broadcast
+COPY remote_attestation/contracts ./remote_attestation/contracts
+COPY remote_attestation/out ./remote_attestation/out
+COPY remote_attestation/script ./remote_attestation/script
+COPY remote_attestation/starter_docker.sh ./remote_attestation/starter_docker.sh
+
+RUN mkdir -p /dfl/remote_attestation/cache /dfl/remote_attestation/out /dfl/remote_attestation/broadcast
+
+WORKDIR /dfl/remote_attestation
