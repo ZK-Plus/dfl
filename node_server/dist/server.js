@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import child_process from 'child_process';
 import util from 'util';
-import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized} from "./bc_client.js";
+import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized, getDevicePublicKey} from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
 import fs from 'fs/promises';
 import { DstackClient } from '@phala/dstack-sdk';
@@ -78,7 +78,7 @@ const stateMachine = async () => {
 
                     console.log("Starting local training ...");
                     try {
-                        const { stdout, stderr } = await trainingProcess(exePath, ["train", String(process.env.EPOCH)]);
+                        const { stdout, stderr } = await trainingProcess(exePath, ["train", String(process.env.EPOCH), await getDevicePublicKey(state[1])]);
                         console.log('stdout:', stdout);
                         if (stderr) {
                             console.error('stderr:', stderr);

@@ -39,7 +39,3 @@ To calculate the federated average.
 ```
 ./start.exe aggregate 3
 ```
-
-### Functionality of the neural network
-- AES global model encryption and decryption is simulated
-- RSA signature verification with SHA 256, all clients sign with the same key
