@@ -7,15 +7,97 @@
 #include "train-network2.h"
 #include "network2.h"
 #include <openssl/evp.h>
-#include <openssl/pem.h>
+#include <openssl/x509.h>   // d2i_PUBKEY
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/aes.h>
 #include <thread>
+#include <cctype>
+#include <string>
+#include <vector>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
+#include <cstring>
+#include <cstdint>
 
 using namespace std;
 using Eigen::MatrixXd;
 const int AES_KEY_LENGTH = 256;
+
+static bool hexToBytes(const std::string &hexIn, std::vector<unsigned char> &out);
+static EVP_PKEY *loadPublicKeyFromDerHex(const std::string &derHex);
+static bool rsaOaepSha256Encrypt(EVP_PKEY *publicKey,
+                                const unsigned char *in,
+                                size_t inLen,
+                                std::string &out);
+
+void printOpenSSLErrorLocal();
+
+static void appendMatrixAsSaveFormat(const MatrixXd &model, std::string &out)
+{
+    const int rows = (int)model.rows();
+    const int cols = (int)model.cols();
+    for (int j = 0; j < cols; j++)
+    {
+        for (int i = 0; i < rows; i++)
+        {
+            const double value = model(i, j);
+            out.append(reinterpret_cast<const char *>(&value), sizeof(double));
+        }
+    }
+}
+
+static bool encryptAes256Cbc(const std::string &plaintext,
+                            std::string &ciphertext,
+                            const unsigned char *key,
+                            const unsigned char *iv)
+{
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+    {
+        cerr << "Error: Failed to create EVP_CIPHER_CTX" << endl;
+        return false;
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv) != 1)
+    {
+        cerr << "Error: EVP_EncryptInit_ex failed" << endl;
+        printOpenSSLErrorLocal();
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    ciphertext.clear();
+    ciphertext.resize(plaintext.size() + AES_BLOCK_SIZE);
+
+    int outLen1 = 0;
+    if (EVP_EncryptUpdate(ctx,
+                          reinterpret_cast<unsigned char *>(ciphertext.data()),
+                          &outLen1,
+                          reinterpret_cast<const unsigned char *>(plaintext.data()),
+                          (int)plaintext.size()) != 1)
+    {
+        cerr << "Error: EVP_EncryptUpdate failed" << endl;
+        printOpenSSLErrorLocal();
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    int outLen2 = 0;
+    if (EVP_EncryptFinal_ex(ctx,
+                           reinterpret_cast<unsigned char *>(ciphertext.data()) + outLen1,
+                           &outLen2) != 1)
+    {
+        cerr << "Error: EVP_EncryptFinal_ex failed" << endl;
+        printOpenSSLErrorLocal();
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    ciphertext.resize((size_t)outLen1 + (size_t)outLen2);
+    EVP_CIPHER_CTX_free(ctx);
+    return true;
+}
 
 // Initialize weights and biases to a random value between -0.5 and 0.5
 weights_and_biases wab;
@@ -332,7 +414,7 @@ void simulateKeyFetchLM()
     std::this_thread::sleep_for(std::chrono::milliseconds(550));
 }
 
-int train_network(const string &wb_in, const string &wb_out, const string &image_path, const string &label_path, const int epoch_amount)
+int train_network(const string &wb_in, const string &wb_out, const string &image_path, const string &label_path, const int epoch_amount, const string &current_aggregator_public_rsa_key)
 {
     // Register signal handler
     signal(SIGINT, signal_callback_handler);
@@ -353,6 +435,27 @@ int train_network(const string &wb_in, const string &wb_out, const string &image
     {
         cerr << "Error: Could not load private key." << endl;
         return 1;
+    }
+
+    // Convert the public key to DER format for sending
+    std::string senderPubDer;
+    {
+        int len = i2d_PUBKEY(privateKey, nullptr);
+        if (len <= 0) {
+            cerr << "Error: i2d_PUBKEY(size) failed" << endl;
+            printOpenSSLErrorLocal();
+            EVP_PKEY_free(privateKey);
+            return 1;
+        }
+
+        senderPubDer.resize((size_t)len);
+        unsigned char *p = reinterpret_cast<unsigned char *>(senderPubDer.data());
+        if (i2d_PUBKEY(privateKey, &p) <= 0) {
+            cerr << "Error: i2d_PUBKEY failed" << endl;
+            printOpenSSLErrorLocal();
+            EVP_PKEY_free(privateKey);
+            return 1;
+        }
     }
 
     // Initialize weights and biases to a random value between -0.5 and 0.5
@@ -402,23 +505,110 @@ int train_network(const string &wb_in, const string &wb_out, const string &image
 
     cout << "Finished training!\n";
 
+    if (current_aggregator_public_rsa_key.empty())
+    {
+        cout << "Skipping encryption: current_aggregator_public_rsa_key not provided.\n";
+        EVP_PKEY_free(privateKey);
+        if (SAVE_WEIGHTS_AND_BIASES)
+        {
+            save_weights_and_biases(wb_out);
+        }
+        return 0;
+    }
+
     // after epoch, sign and encrypt the model
-    // Encrypt the local model
-    string encryptedModel;
+    // Encrypt the local model (all 6 matrices together, in the same order/format as save())
+    std::string plaintextModel;
+    plaintextModel.reserve((wab.W1.size() + wab.B1.size() + wab.W2.size() + wab.B2.size() + wab.W3.size() + wab.B3.size()) * sizeof(double));
+    appendMatrixAsSaveFormat(wab.W1, plaintextModel);
+    appendMatrixAsSaveFormat(wab.B1, plaintextModel);
+    appendMatrixAsSaveFormat(wab.W2, plaintextModel);
+    appendMatrixAsSaveFormat(wab.B2, plaintextModel);
+    appendMatrixAsSaveFormat(wab.W3, plaintextModel);
+    appendMatrixAsSaveFormat(wab.B3, plaintextModel);
+
+    cout << "Model serialization OK (plaintext bytes=" << plaintextModel.size() << ")\n";
+
     unsigned char aesKey[AES_KEY_LENGTH / 8]; // AES-256 key
     unsigned char iv[16];                     // Initialization vector
-    RAND_bytes(aesKey, sizeof(aesKey));       // Generate random AES key
-    RAND_bytes(iv, sizeof(iv));               // Generate random IV
-    encryptLocalModel(wab.W1, encryptedModel, aesKey, iv);
-    encryptLocalModel(wab.B1, encryptedModel, aesKey, iv);
-    encryptLocalModel(wab.W2, encryptedModel, aesKey, iv);
-    encryptLocalModel(wab.B2, encryptedModel, aesKey, iv);
-    encryptLocalModel(wab.W3, encryptedModel, aesKey, iv);
-    encryptLocalModel(wab.B3, encryptedModel, aesKey, iv);
+    if (RAND_bytes(aesKey, sizeof(aesKey)) != 1 || RAND_bytes(iv, sizeof(iv)) != 1)
+    {
+        cerr << "Error: RAND_bytes failed" << endl;
+        printOpenSSLErrorLocal();
+        EVP_PKEY_free(privateKey);
+        return 1;
+    }
 
-    // Sign the global model
-    string signature;
-    signLocalModel(wab.W1, privateKey, signature);
+    std::string encryptedModel;
+    if (!encryptAes256Cbc(plaintextModel, encryptedModel, aesKey, iv))
+    {
+        cerr << "Error: Model encryption failed" << endl;
+        EVP_PKEY_free(privateKey);
+        return 1;
+    }
+
+    cout << "AES-256-CBC encryption OK (ciphertext bytes=" << encryptedModel.size() << ")\n";
+
+    // RSA-wrap AES key + IV using aggregator public key (DER-hex, starts with 0x)
+    EVP_PKEY *aggPubKey = loadPublicKeyFromDerHex(current_aggregator_public_rsa_key);
+    if (!aggPubKey)
+    {
+        cerr << "Error: Could not parse aggregator public key (DER hex)" << endl;
+        EVP_PKEY_free(privateKey);
+        return 1;
+    }
+
+    cout << "Aggregator public key parsed OK (DER-hex)\n";
+
+    unsigned char keyIv[sizeof(aesKey) + sizeof(iv)];
+    memcpy(keyIv, aesKey, sizeof(aesKey));
+    memcpy(keyIv + sizeof(aesKey), iv, sizeof(iv));
+
+    std::string wrappedKeyIv;
+    if (!rsaOaepSha256Encrypt(aggPubKey, keyIv, sizeof(keyIv), wrappedKeyIv))
+    {
+        cerr << "Error: RSA OAEP encrypt(key||iv) failed" << endl;
+        EVP_PKEY_free(aggPubKey);
+        EVP_PKEY_free(privateKey);
+        return 1;
+    }
+    EVP_PKEY_free(aggPubKey);
+
+    cout << "RSA-OAEP-SHA256 wrap(key||iv) OK (wrapped bytes=" << wrappedKeyIv.size() << ")\n";
+
+    // Write .enc as a single binary package:
+    // [u32 wrappedLen][wrappedKeyIv][u32 ciphertextLen][ciphertext]
+    const std::string encrypted_out = wb_out + ".enc";
+    std::ofstream outEnc(encrypted_out, std::ios::binary);
+    if (!outEnc.is_open())
+    {
+        cerr << "Error: Could not open encrypted output file: " << encrypted_out << endl;
+        EVP_PKEY_free(privateKey);
+        return 1;
+    }
+
+    const uint32_t senderPubLen = (uint32_t)senderPubDer.size();
+    const uint32_t wrappedLen   = (uint32_t)wrappedKeyIv.size();
+    const uint32_t ctLen        = (uint32_t)encryptedModel.size();
+
+    outEnc.write(reinterpret_cast<const char *>(&senderPubLen), sizeof(senderPubLen));
+    outEnc.write(senderPubDer.data(), (std::streamsize)senderPubDer.size());
+
+    outEnc.write(reinterpret_cast<const char *>(&wrappedLen), sizeof(wrappedLen));
+    outEnc.write(wrappedKeyIv.data(), (std::streamsize)wrappedKeyIv.size());
+
+    outEnc.write(reinterpret_cast<const char *>(&ctLen), sizeof(ctLen));
+    outEnc.write(encryptedModel.data(), (std::streamsize)encryptedModel.size());
+    outEnc.close();
+
+        cout << "Encrypted package written: " << encrypted_out
+            << " (senderPubDer=" << senderPubLen
+            << ", wrapped=" << wrappedLen
+            << ", ct=" << ctLen << ")\n";
+
+    //// Sign the global model
+    //string signature;
+    //signLocalModel(wab.W1, privateKey, signature);
 
     EVP_PKEY_free(privateKey);
     EVP_cleanup();
@@ -433,4 +623,104 @@ int train_network(const string &wb_in, const string &wb_out, const string &image
     }
 
     return 0;
+}
+
+static bool rsaOaepSha256Encrypt(EVP_PKEY *publicKey,
+                                const unsigned char *in,
+                                size_t inLen,
+                                std::string &out)
+{
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(publicKey, nullptr);
+    if (!ctx) { printOpenSSLErrorLocal(); return false; }
+
+    if (EVP_PKEY_encrypt_init(ctx) <= 0 ||
+        EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <= 0 ||
+        EVP_PKEY_CTX_set_rsa_oaep_md(ctx, EVP_sha256()) <= 0 ||
+        EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, EVP_sha256()) <= 0)
+    {
+        printOpenSSLErrorLocal();
+        EVP_PKEY_CTX_free(ctx);
+        return false;
+    }
+
+    size_t outLen = 0;
+    if (EVP_PKEY_encrypt(ctx, nullptr, &outLen, in, inLen) <= 0)
+    {
+        printOpenSSLErrorLocal();
+        EVP_PKEY_CTX_free(ctx);
+        return false;
+    }
+
+    out.resize(outLen);
+    if (EVP_PKEY_encrypt(ctx,
+                         reinterpret_cast<unsigned char *>(out.data()),
+                         &outLen,
+                         in,
+                         inLen) <= 0)
+    {
+        printOpenSSLErrorLocal();
+        EVP_PKEY_CTX_free(ctx);
+        return false;
+    }
+
+    out.resize(outLen);
+    EVP_PKEY_CTX_free(ctx);
+    return true;
+}
+
+static bool hexToBytes(const std::string &hexIn, std::vector<unsigned char> &out)
+{
+    std::string hex = hexIn;
+    if (hex.rfind("0x", 0) == 0 || hex.rfind("0X", 0) == 0)
+        hex = hex.substr(2);
+
+    std::string cleaned;
+    cleaned.reserve(hex.size());
+    for (char c : hex)
+    {
+        if (!std::isspace((unsigned char)c))
+            cleaned.push_back(c);
+    }
+
+    if (cleaned.size() % 2 != 0)
+        return false;
+
+    auto nibble = [](char c) -> int {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+        if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+        return -1;
+    };
+
+    out.clear();
+    out.reserve(cleaned.size() / 2);
+    for (size_t i = 0; i < cleaned.size(); i += 2)
+    {
+        const int hi = nibble(cleaned[i]);
+        const int lo = nibble(cleaned[i + 1]);
+        if (hi < 0 || lo < 0)
+            return false;
+        out.push_back((unsigned char)((hi << 4) | lo));
+    }
+    return true;
+}
+
+static EVP_PKEY *loadPublicKeyFromDerHex(const std::string &derHex)
+{
+    std::vector<unsigned char> der;
+    if (!hexToBytes(derHex, der))
+    {
+        cerr << "Error: invalid DER-hex public key" << endl;
+        return nullptr;
+    }
+
+    const unsigned char *p = der.data();
+    EVP_PKEY *pub = d2i_PUBKEY(nullptr, &p, (long)der.size());
+    if (!pub)
+    {
+        cerr << "Error: d2i_PUBKEY failed" << endl;
+        printOpenSSLErrorLocal();
+        return nullptr;
+    }
+    return pub;
 }

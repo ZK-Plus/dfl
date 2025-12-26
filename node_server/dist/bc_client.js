@@ -228,3 +228,13 @@ export const isAuthorized = async (address) => {
     return result;
 };
 
+// get device public key (bytes) from registry by device address
+export const getDevicePublicKey = async (address) => {
+    const abi = JSON.parse(fs.readFileSync("./abi/registry.json", "utf-8"));
+    const contract = new web3.eth.Contract(abi, device_registry_address);
+    const result = await contract.methods.getDevice(address).call();
+    // web3 may return both array indices and named fields
+    const publicKey = (result && (result.public_key ?? result[3])) ?? "0x";
+    return publicKey;
+};
+
