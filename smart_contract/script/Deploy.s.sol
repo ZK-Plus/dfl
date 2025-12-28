@@ -32,6 +32,9 @@ contract ContractDeploy is Script {
 
         vm.startBroadcast(deployerKey);
 
+        address initialGmSigner = vm.envAddress("INITIAL_GM_SIGNER_ADDRESS");
+        string memory initialGmSigCid = vm.envString("INITIAL_GM_SIG_CID");
+
         //AggregatorSelection aggregatorSelection = new AggregatorSelection(
         //    address(0x607B2b2229eba34075fEEEF2E43AC96481133A58)
         //);
@@ -45,7 +48,9 @@ contract ContractDeploy is Script {
             address(0x3507E0d0a6001031B0b35aB912bd5135fe5EAFA1),
             ///address(aggregatorSelection)
             address(0x299e2c907A9f00b9a23E828765d3A8a72fbFac37),
-            "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8"
+            "QmZuFtULnQRT3xX9yQKVaPVXp54BVYNTyoueBbHCApbUr8",
+            initialGmSigCid,
+            initialGmSigner
         );
         console2.log("Deployed GMStorage to", address(gmStorage));
 

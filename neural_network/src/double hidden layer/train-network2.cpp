@@ -346,7 +346,7 @@ void encryptLocalModel(const MatrixXd &model, string &encryptedData, const unsig
     cout << "Local model encrypted successfully." << endl;
 }
 
-void verifySignatureGM()
+/*void verifySignatureGM()
 {
     cout << "Verifying signature..." << endl;
     // Load the public key
@@ -406,13 +406,13 @@ void verifySignatureGM()
     // Cleanup
     EVP_MD_CTX_free(mdctx);
     EVP_PKEY_free(publicKey);
-}
+}*/
 
-void simulateKeyFetchLM()
+/*void simulateKeyFetchLM()
 {
     // Simulate the key fetch from GMC
     std::this_thread::sleep_for(std::chrono::milliseconds(550));
-}
+}*/
 
 int train_network(const string &wb_in, const string &wb_out, const string &image_path, const string &label_path, const int epoch_amount, const string &current_aggregator_public_rsa_key)
 {
