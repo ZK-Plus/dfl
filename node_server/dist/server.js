@@ -11,12 +11,10 @@ import { DstackClient } from '@phala/dstack-sdk';
 import crypto from 'crypto';
 
 const trainingProcess = util.promisify(child_process.execFile);
-// Define __dirname manually
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const exePath = path.join(__dirname, '../start.exe');
 const deviceID = process.env.DEVICE_ID;
-//let round = Number(process.env.ROUND ?? 1); // parse as number
 let currentState = "";
 let aggregatorProc = null;
 const rsaPublicKey = process.env.RSA_PUBLIC_KEY.replace(/\\n/g, '\n') || "";
@@ -156,15 +154,13 @@ const stateMachine = async () => {
                         }
                     } catch (e) {
                         console.error("Error during local training:", e);
+                        await decrementContribution([process.env.ACCOUNT_ADDRESS]);
                         return;
                     }
                     console.log("Local training complete.");
 
                     if (process.env.DOCKER === "phala") {
-                        // todo: only for TDX attestation    
-                        // Check device registration contract if worker is already registered
                         console.log("Fetching TDX Quote ...");
-                        // Create client - automatically connects to /var/run/dstack.sock
                         const client = new DstackClient();
                         const devClient = new DstackClient('http://localhost:8090');
 
@@ -186,9 +182,6 @@ const stateMachine = async () => {
                         console.log('TDX Quote:', quote.quote);
 
                     }
-                    // Should this be done here?
-                    //if (await !isAuthorized(process.env.ACCOUNT_ADDRESS))
-                    //    return console.error("This device is not authorized to participate in training.");
                     console.log("Is the device authorized? ", await isAuthorized(process.env.ACCOUNT_ADDRESS));
                     console.log("Starting the zerompq client ...");
                     try {
@@ -200,6 +193,7 @@ const stateMachine = async () => {
                         await setContribution([process.env.ACCOUNT_ADDRESS]);
                     } catch (e) {
                         console.error("Error during model transfer:", e);
+                        await decrementContribution([process.env.ACCOUNT_ADDRESS]);
                         return;
                     }
                     console.log("Top contributor:", await getTopContributor());
@@ -214,7 +208,6 @@ const stateMachine = async () => {
                     }
                     await sleep(2000);
                     continue;
-                    //break;
                 }
 
             case "AGGREGATING":

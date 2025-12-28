@@ -205,6 +205,37 @@ export const setContribution = async (deviceID: string[]) => {
     }
 }
 
+// decrement the contribution score of devices
+export const decrementContribution = async (deviceIDs: string[]) => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    const contract = new web3.eth.Contract(abi, address);
+
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await contract.methods.decrementContribution(deviceIDs).estimateGas({ from: account.address });
+
+    const tx = {
+        from: account.address,
+        to: address,
+        gas: gasEstimate,
+        gasPrice: gasPrice,
+        data: contract.methods.decrementContribution(deviceIDs).encodeABI(),
+    };
+
+    try {
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction as string);
+        console.log("Transaction receipt: ", receipt);
+        return receipt;
+    } catch (error) {
+        console.error("Error sending transaction: ", error);
+        throw error;
+    }
+}
+
 export const getTopContributor = async () => {
     const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
     const address = gm_storage_address;
