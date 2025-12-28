@@ -26,8 +26,6 @@ import {EvenNumber} from "../contracts/EvenNumber.sol";
 import {DeviceRegistry} from "../contracts/DeviceRegistry.sol";
 import {AggregatorSelection} from "../contracts/AggregatorSelection.sol";
 import {GMStorage} from "smart_contract/GMStorage.sol";
-//import {AggregatorSelection} from "/Users/sonak/arbeit/dfl/dfl/smart_contract/src/AggregatorSelection.sol";
-//import {GMStorage} from "/Users/sonak/arbeit/dfl/dfl/smart_contract/src/GMStorage.sol";
 
 
 
@@ -59,12 +57,16 @@ contract DeviceRegistryDeploy is Script {
         );
 
         string memory initial_gm_cid = vm.envString("INITIAL_GM_CID");
+        string memory initial_gm_sig_cid = vm.envString("INITIAL_GM_SIG_CID");
+        address initial_gm_signer_address = vm.envAddress("INITIAL_GM_SIGNER_ADDRESS");
 
         // needs deviceRegistry and AggrigatorSelection
         GMStorage gmStorage = new GMStorage(
             address(deviceRegistry),
             address(aggregatorSelection),
-            initial_gm_cid
+            initial_gm_cid,
+            initial_gm_sig_cid,
+            initial_gm_signer_address
         );
         console2.log("Deployed GMStorage to", address(gmStorage));
 

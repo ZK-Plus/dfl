@@ -1,14 +1,11 @@
 #include <fstream>
 #include <iostream>
 #include "functions.h"
-#include <Eigen/Dense>
 #include <cfloat>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 #include <openssl/err.h>
-#include <openssl/rand.h>
-#include <openssl/aes.h>
 #include <string>
 #include <chrono>
 #include <thread>
@@ -309,6 +306,53 @@ bool verifyModelFileSignature(const std::string &modelPath,
     cerr << "Error: EVP_DigestVerifyFinal failed" << endl;
     printOpenSSLError();
     return false;
+}
+
+bool signFileToSignature(const std::string &filePath,
+                         const std::string &privateKeyPemPath,
+                         const std::string &sigOutPath)
+{
+    std::ifstream in(filePath, std::ios::binary);
+    if (!in.is_open())
+    {
+        cerr << "Error: Could not open file to sign: " << filePath << endl;
+        return false;
+    }
+
+    std::string fileBytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.close();
+
+    if (fileBytes.empty())
+    {
+        cerr << "Error: File is empty, refusing to sign: " << filePath << endl;
+        return false;
+    }
+
+    EVP_PKEY *privateKey = loadPrivateKey(privateKeyPemPath.c_str());
+    if (!privateKey)
+        return false;
+
+    std::string signature;
+    const bool ok = signBytesWithKey(privateKey, fileBytes.data(), fileBytes.size(), signature);
+    EVP_PKEY_free(privateKey);
+
+    if (!ok || signature.empty())
+    {
+        cerr << "Error: Signing failed" << endl;
+        return false;
+    }
+
+    std::ofstream out(sigOutPath, std::ios::binary);
+    if (!out.is_open())
+    {
+        cerr << "Error: Could not open signature output: " << sigOutPath << endl;
+        return false;
+    }
+    out.write(signature.data(), (std::streamsize)signature.size());
+    out.close();
+
+    cout << "Signature written: " << sigOutPath << " (bytes=" << signature.size() << ")" << endl;
+    return true;
 }
 
 // Function to load the private key from a PEM file

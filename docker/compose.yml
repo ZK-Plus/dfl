@@ -43,6 +43,8 @@ services:
       IPFS_PROVIDER: ${IPFS_PROVIDER}
       DOCKER: ${DOCKER}
       INITIAL_GM_CID: ${INITIAL_GM_CID}
+      INITIAL_GM_SIG_CID: ${INITIAL_GM_SIG_CID}
+      INITIAL_GM_SIGNER_ADDRESS: ${INITIAL_GM_SIGNER_ADDRESS}
     command: ["/dfl/remote_attestation/starter_docker.sh"]
 
   #remote-attestation: 

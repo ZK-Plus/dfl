@@ -81,4 +81,10 @@ bool verifyModelFileSignature(const std::string &modelPath,
                               const std::string &sigPath,
                               const std::string &publicKeyDerHex);
 
+// Signs arbitrary file bytes and writes raw signature bytes to sigOutPath.
+// privateKeyPemPath should point to a PEM-encoded private key (e.g. private_key.pem).
+bool signFileToSignature(const std::string &filePath,
+                         const std::string &privateKeyPemPath,
+                         const std::string &sigOutPath);
+
 #endif

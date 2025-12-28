@@ -4,10 +4,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import child_process from 'child_process';
 import util from 'util';
-import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized, getDevicePublicKey} from "./bc_client.js";
+import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized, getDevicePublicKey, getPreviousAggregatorFromGMStorage, getLastRoundsAggregator } from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
 import fs from 'fs/promises';
 import { DstackClient } from '@phala/dstack-sdk';
+import crypto from 'crypto';
 
 const trainingProcess = util.promisify(child_process.execFile);
 // Define __dirname manually
@@ -38,6 +39,63 @@ async function stopAggregatorServer({ softMs = 2000 } = {}) {
             try { aggregatorProc.kill('SIGKILL'); } catch {}
         }, softMs);
     });
+}
+
+function derHexToBuffer(derHex) {
+    if (typeof derHex !== 'string') return Buffer.alloc(0);
+    let hex = derHex.trim();
+    if (hex.startsWith('0x') || hex.startsWith('0X')) hex = hex.slice(2);
+    hex = hex.replace(/\s+/g, '');
+    if (hex.length === 0 || (hex.length % 2) !== 0) return Buffer.alloc(0);
+    return Buffer.from(hex, 'hex');
+}
+
+async function verifyDownloadedGlobalModelSignature({ publicKeyDerHex, modelPath = './data/gm.bin', sigPath = './data/gm.bin.sig' } = {}) {
+    const pubDer = derHexToBuffer(publicKeyDerHex);
+    if (!pubDer.length) {
+        console.error('Signature verification: invalid public key DER-hex');
+        return false;
+    }
+
+    let modelBytes;
+    let sigBytes;
+    try {
+        modelBytes = await fs.readFile(modelPath);
+    } catch (e) {
+        console.error(`Signature verification: cannot read model file ${modelPath}`, e);
+        return false;
+    }
+    try {
+        sigBytes = await fs.readFile(sigPath);
+    } catch (e) {
+        console.error(`Signature verification: cannot read signature file ${sigPath}`, e);
+        return false;
+    }
+    if (!sigBytes || sigBytes.length === 0) {
+        console.error('Signature verification: signature file empty');
+        return false;
+    }
+
+    let keyObject;
+    try {
+        keyObject = crypto.createPublicKey({ key: pubDer, format: 'der', type: 'spki' });
+    } catch (e) {
+        console.error('Signature verification: failed to parse public key (DER/SPKI)', e);
+        return false;
+    }
+
+    try {
+        const ok = crypto.verify(
+            'RSA-SHA256',
+            modelBytes,
+            { key: keyObject, padding: crypto.constants.RSA_PKCS1_PADDING },
+            sigBytes
+        );
+        return !!ok;
+    } catch (e) {
+        console.error('Signature verification: crypto.verify failed', e);
+        return false;
+    }
 }
 
 const stateMachine = async () => {
@@ -75,6 +133,19 @@ const stateMachine = async () => {
                     await getCurrentModel();
 
                     const prevGM = await getCurrentGM();
+
+                    const lastSignerAddress = await getLastRoundsAggregator();
+                    const lastSignersPubKey = await getDevicePublicKey(lastSignerAddress);
+                    const sigOk = await verifyDownloadedGlobalModelSignature({
+                        publicKeyDerHex: lastSignersPubKey,
+                        modelPath: "./data/gm.bin",
+                        sigPath: "./data/gm.bin.sig",
+                    });
+                    if (!sigOk) {
+                        console.error("Global model signature verification FAILED. Aborting training.");
+                        return;
+                    }
+                    console.log("Global model signature verification successful.");
 
                     console.log("Starting local training ...");
                     try {
@@ -205,7 +276,6 @@ const stateMachine = async () => {
                         return;
                     }
                     console.log("Updating complete.");
-                    //await setCurrentState("IDLE");
                     console.log("Current Global Model:", await getCurrentGM());
                     await stageCleaning();
                     console.log("Passed cleaning");

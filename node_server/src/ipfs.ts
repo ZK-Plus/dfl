@@ -2,14 +2,14 @@ import axios from "axios";
 import fs from "fs";
 import FormData from "form-data";
 
-import { setGlobalModel, getCurrentGM } from "./bc_client.js";
+import { setGlobalModelAndSignature, getCurrentGM, getCurrentGMSignature } from "./bc_client.js";
 
-export const pinFile = async () => {
+export const pinFile = async (filePath: string) => {
   
     try {
       const formData = new FormData();
   
-      const file = fs.createReadStream("./data/backup.bin");
+  const file = fs.createReadStream(filePath);
       formData.append("file", file);
   
       const pinataMetadata = JSON.stringify({
@@ -37,14 +37,13 @@ export const pinFile = async () => {
     }
   }
   
-  export const getFileFromIPFS = async (hash: string) => {
+  export const getFileFromIPFS = async (hash: string, outPath: string = "./data/gm.bin") => {
     try {
       //const res = await axios.get(`https://turquoise-zestful-squirrel-651.mypinata.cloud/ipfs/${hash}`);
       //const res = await axios.get(process.env.IPFS_GATEWAY + `/ipfs/${hash}`);
       const res = await axios.get("https://plum-peaceful-flea-894.mypinata.cloud/ipfs/${hash}");
       // write the file which is in binary format to the local file system
-      fs.writeFileSync
-        (`./data/gm.bin`, res.data, { encoding: "binary" });
+      fs.writeFileSync(outPath, res.data, { encoding: "binary" });
       console.log("File written to the local file system");
     } catch (error) {
       console.log(error);
@@ -52,17 +51,33 @@ export const pinFile = async () => {
   }
   
   export const updateGM = async () => {
-    const ipfsAddress = await pinFile();
-    console.log(ipfsAddress);
-    setGlobalModel(ipfsAddress);
-    console.log("Global model updated");
+    const modelPath = "./data/results_iid/aggregated.bin";
+    const sigPath = "./data/results_iid/aggregated.bin.sig";
+
+    const modelCid = await pinFile(modelPath);
+    if (!modelCid) throw new Error("Pinning failed for model, no CID returned");
+
+    const sigCid = await pinFile(sigPath);
+    if (!sigCid) throw new Error("Pinning failed for signature, no CID returned");
+
+    console.log("New GM CID:", modelCid);
+    console.log("New GM SIG CID:", sigCid);
+
+    await setGlobalModelAndSignature(modelCid, sigCid);
+    console.log("Global model + signature updated (on-chain) ");
   }
   
   export const getCurrentModel = async () => {
-    const ipfsAddress = await getCurrentGM();
-    console.log(ipfsAddress);
-    if (typeof ipfsAddress === 'string') {
-      await getFileFromIPFS(ipfsAddress);
-      console.log("Global model retrieved");
+    const modelCid = await getCurrentGM();
+    const sigCid = await getCurrentGMSignature();
+    console.log("Model CID:", modelCid);
+    console.log("Sig CID:", sigCid);
+
+    if (typeof modelCid === 'string' && modelCid.length > 0) {
+      await getFileFromIPFS(modelCid, "./data/gm.bin");
     }
+    if (typeof sigCid === 'string' && sigCid.length > 0) {
+      await getFileFromIPFS(sigCid, "./data/gm.bin.sig");
+    }
+    console.log("Global model fetched" + (sigCid ? " + signature" : ""));
   }

@@ -9,20 +9,44 @@ const gm_storage_address = process.env.GM_STORAGE_ADDRESS;
 const aggregator_address = process.env.AGGREGATOR_ADDRESS;
 const device_registry_address = process.env.REGISTRY_ADDRESS;
 const privateKey = process.env.PRIVATE_KEY;
+
+const getGMStorageContract = () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    return new web3.eth.Contract(abi, address);
+};
 // send contract call to blockchain
 export const getCurrentGM = async () => {
-    // get contract abi from json file using fs instead of require
-    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
-    // get contract address
-    const address = gm_storage_address;
-    // get contract
-    const contract = new web3.eth.Contract(abi, address);
+    const contract = getGMStorageContract();
     // call method of contract
     let ipfs_address = await contract.methods.getGlobalModel().call().then((result) => {
         return result;
     });
     return ipfs_address;
 };
+
+export const getCurrentGMSignature = async () => {
+    const contract = getGMStorageContract();
+    let sig = await contract.methods.getGlobalModelSignature().call().then((result) => {
+        return result;
+    });
+    return sig;
+};
+
+export const getLastRoundsAggregator = async () => {
+    const contract = getGMStorageContract();
+    let agg = await contract.methods.getLastRoundsAggregator().call().then((result) => {
+        return result;
+    });
+    return agg;
+};
+
+// Backwards-compatible alias used by server.js
+export const getPreviousAggregatorFromGMStorage = async () => {
+    return await getLastRoundsAggregator();
+};
+
+
 // function to set global model
 export const setGlobalModel = async (newIpfsAddress) => {
     const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
@@ -38,6 +62,87 @@ export const setGlobalModel = async (newIpfsAddress) => {
         gas: gasEstimate,
         gasPrice: gasPrice,
         data: contract.methods.setGlobalModel(newIpfsAddress).encodeABI(),
+    };
+    try {
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+        console.log("Transaction receipt: ", receipt);
+        return receipt;
+    }
+    catch (error) {
+        console.error("Error sending transaction: ", error);
+        throw error;
+    }
+};
+
+export const setGlobalModelSignature = async (newSigIpfsAddress) => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    const contract = new web3.eth.Contract(abi, address);
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await contract.methods.setGlobalModelSignature(newSigIpfsAddress).estimateGas({ from: account.address });
+    const tx = {
+        from: account.address,
+        to: address,
+        gas: gasEstimate,
+        gasPrice: gasPrice,
+        data: contract.methods.setGlobalModelSignature(newSigIpfsAddress).encodeABI(),
+    };
+    try {
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+        console.log("Transaction receipt: ", receipt);
+        return receipt;
+    }
+    catch (error) {
+        console.error("Error sending transaction: ", error);
+        throw error;
+    }
+};
+
+export const setGlobalModelAndSignature = async (newModelIpfsAddress, newSigIpfsAddress) => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    const contract = new web3.eth.Contract(abi, address);
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await contract.methods.setGlobalModelAndSignature(newModelIpfsAddress, newSigIpfsAddress).estimateGas({ from: account.address });
+    const tx = {
+        from: account.address,
+        to: address,
+        gas: gasEstimate,
+        gasPrice: gasPrice,
+        data: contract.methods.setGlobalModelAndSignature(newModelIpfsAddress, newSigIpfsAddress).encodeABI(),
+    };
+    try {
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+        console.log("Transaction receipt: ", receipt);
+        return receipt;
+    }
+    catch (error) {
+        console.error("Error sending transaction: ", error);
+        throw error;
+    }
+};
+
+export const setLastRoundAggregator = async () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
+    const address = gm_storage_address;
+    const contract = new web3.eth.Contract(abi, address);
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await contract.methods.setLastRoundAggregator().estimateGas({ from: account.address });
+    const tx = {
+        from: account.address,
+        to: address,
+        gas: gasEstimate,
+        gasPrice: gasPrice,
+        data: contract.methods.setLastRoundAggregator().encodeABI(),
     };
     try {
         const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
