@@ -4,3 +4,6 @@
 [submodule "remote_attestation/lib/p256-verifier"]
 	path = remote_attestation/lib/p256-verifier
 	url = https://github.com/daimo-eth/p256-verifier
+[submodule "remote_attestation/lib/automata-dcap-v3-attestation"]
+	path = remote_attestation/lib/automata-dcap-v3-attestation
+	url = https://github.com/automata-network/automata-dcap-v3-attestation
