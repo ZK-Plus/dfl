@@ -1,0 +1,45 @@
+FROM rust:1.87-slim
+
+ARG FOUNDRY_VERSION=nightly-dd0a687aa36ec731b6ea2cda2aa4f32e192814fa
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    pkg-config \
+    curl \
+    git \
+    bash \
+    ca-certificates \
+    cmake \
+    python3 \
+    jq \
+    docker.io \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+#RUN curl -L https://risczero.com/install | bash && \
+#    /root/.risc0/bin/rzup install rust 1.85.0 && \
+#    /root/.risc0/bin/rzup install cpp 2024.1.5 && \
+#    /root/.risc0/bin/rzup install r0vm 2.3.0 && \
+#    /root/.risc0/bin/rzup install cargo-risczero 2.3.0 && \
+#    /root/.risc0/bin/rzup default r0vm 2.3.0
+
+ENV PATH="/root/.risc0/bin:${PATH}"
+
+RUN curl -L https://foundry.paradigm.xyz | bash && \
+    /root/.foundry/bin/foundryup -i "${FOUNDRY_VERSION}" && \
+    /root/.foundry/bin/forge --version && \
+    /root/.foundry/bin/anvil --version
+
+ENV PATH="/root/.foundry/bin:/root/.risc0/bin:${PATH}"
+
+WORKDIR /dfl
+COPY smart_contract ./smart_contract
+#COPY remote_attestation/broadcast ./remote_attestation/broadcast
+#COPY remote_attestation/contracts ./remote_attestation/contracts
+#COPY remote_attestation/lib ./remote_attestation/lib
+#COPY remote_attestation/out ./remote_attestation/out
+#COPY remote_attestation/script ./remote_attestation/script
+#COPY remote_attestation/starter_docker.sh ./remote_attestation/starter_docker.sh
+COPY remote_attestation ./remote_attestation
+
+WORKDIR /dfl/remote_attestation

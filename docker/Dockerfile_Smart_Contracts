@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     bash \
     ca-certificates \
     cmake \
+    python3 \
     jq \
     docker.io \
     && apt-get clean && rm -rf /var/lib/apt/lists/*

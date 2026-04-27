@@ -1,0 +1,454 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import {IAttestation} from "automata-dcap-v3-attestation/interfaces/IAttestation.sol";
+import {
+    IdentityObj,
+    EnclaveIdTcbStatus
+} from "@automata-network/on-chain-pccs/helpers/EnclaveIdentityHelper.sol";
+import {
+    TcbInfoBasic,
+    TCBLevelsObj,
+    TDXModule,
+    TDXModuleIdentity,
+    TCBStatus
+} from "@automata-network/on-chain-pccs/helpers/FmspcTcbHelper.sol";
+import {EnclaveIdentityDao} from "@automata-network/on-chain-pccs/bases/EnclaveIdentityDao.sol";
+import {FmspcTcbDao} from "@automata-network/on-chain-pccs/bases/FmspcTcbDao.sol";
+import {PCKHelper, X509CertObj} from "@automata-network/on-chain-pccs/helpers/PCKHelper.sol";
+import {X509CRLHelper} from "@automata-network/on-chain-pccs/helpers/X509CRLHelper.sol";
+import {PcsDao, CA} from "@automata-network/on-chain-pccs/bases/PcsDao.sol";
+import {PEMCertChainBase, PCKCertTCB} from "automata-dcap-v3-attestation/base/PEMCertChainBase.sol";
+import {V4Parser} from "./tdx/QuoteV4Auth/V4Parser.sol";
+import {V4Struct} from "./tdx/QuoteV4Auth/V4Struct.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {LibString} from "solady/utils/LibString.sol";
+
+contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable {
+    using LibString for string;
+
+    EnclaveIdentityDao public enclaveIdDao;
+    FmspcTcbDao public tcbDao;
+
+    error Failed_To_Verify_Quote();
+    error ZK_Verification_Not_Supported();
+
+    uint8 internal constant DEBUG_STAGE_OK = 0;
+    uint8 internal constant DEBUG_STAGE_PARSE_FAILED = 1;
+    uint8 internal constant DEBUG_STAGE_QUOTE_SIGNATURE_FAILED = 2;
+    uint8 internal constant DEBUG_STAGE_CERT_CHAIN_LENGTH_FAILED = 3;
+    uint8 internal constant DEBUG_STAGE_CERT_CHAIN_FAILED = 4;
+    uint8 internal constant DEBUG_STAGE_QE_REPORT_SIGNATURE_FAILED = 5;
+    uint8 internal constant DEBUG_STAGE_QE_IDENTITY_FAILED = 6;
+    uint8 internal constant DEBUG_STAGE_TCB_INFO_MISSING = 7;
+    uint8 internal constant DEBUG_STAGE_TCB_LEVEL_FAILED = 8;
+
+    constructor(
+        address enclaveIdDaoAddr,
+        address pckHelperAddr,
+        address tcbDaoAddr,
+        address crlHelperAddr,
+        address pcsDaoAddr,
+        address p256VerifierAddr
+    ) PEMCertChainBase(pckHelperAddr, crlHelperAddr, pcsDaoAddr, p256VerifierAddr) {
+        _initializeOwner(msg.sender);
+        enclaveIdDao = EnclaveIdentityDao(enclaveIdDaoAddr);
+        tcbDao = FmspcTcbDao(tcbDaoAddr);
+    }
+
+    function updateConfig(
+        address enclaveIdDaoAddr,
+        address pckHelperAddr,
+        address tcbDaoAddr,
+        address crlHelperAddr,
+        address pcsDaoAddr,
+        address p256VerifierAddr
+    ) external onlyOwner {
+        enclaveIdDao = EnclaveIdentityDao(enclaveIdDaoAddr);
+        tcbDao = FmspcTcbDao(tcbDaoAddr);
+        _setCertBaseConfig(pckHelperAddr, crlHelperAddr, pcsDaoAddr, p256VerifierAddr);
+    }
+
+    function verifyAndAttestOnChain(bytes calldata input) external view override returns (bytes memory output) {
+        bool verified;
+        (verified, output) = _verify(input);
+        if (!verified) {
+            revert Failed_To_Verify_Quote();
+        }
+    }
+
+    function verifyAndAttestWithZKProof(bytes calldata, bytes calldata)
+        external
+        pure
+        override
+        returns (bytes memory)
+    {
+        revert ZK_Verification_Not_Supported();
+    }
+
+    function debugVerify(bytes calldata input)
+        external
+        view
+        returns (
+            uint8 stage,
+            uint8 qeTcbStatus,
+            uint8 tcbStatus,
+            uint16 pcesvn,
+            bytes6 fmspc,
+            bytes16 teeTcbSvn,
+            uint16 qeIsvProdId,
+            uint16 qeIsvSvn
+        )
+    {
+        (
+            stage,
+            qeTcbStatus,
+            tcbStatus,
+            pcesvn,
+            fmspc,
+            teeTcbSvn,
+            qeIsvProdId,
+            qeIsvSvn
+        ) = _debugVerify(input);
+    }
+
+    function _verify(bytes calldata quote) private view returns (bool verified, bytes memory output) {
+        (
+            uint8 stage,
+            ,
+            uint8 tcbStatusCode,
+            ,
+            bytes6 fmspcBytes,
+            ,
+            ,
+        ) = _debugVerify(quote);
+        if (stage != DEBUG_STAGE_OK) {
+            return (false, output);
+        }
+
+        (bool success, V4Struct.ParsedV4Quote memory parsedQuote) = V4Parser.parseInput(bytes(quote));
+        if (!success) {
+            return (false, output);
+        }
+        output = abi.encodePacked(TCBStatus(tcbStatusCode), parsedQuote.body.mrtd, parsedQuote.body.reportData, fmspcBytes);
+        verified = true;
+    }
+
+    function _debugVerify(bytes calldata quote)
+        private
+        view
+        returns (
+            uint8 stage,
+            uint8 qeTcbStatusCode,
+            uint8 tcbStatusCode,
+            uint16 pcesvn,
+            bytes6 fmspc,
+            bytes16 teeTcbSvn,
+            uint16 qeIsvProdId,
+            uint16 qeIsvSvn
+        )
+    {
+        (bool success, V4Struct.ParsedV4Quote memory parsedQuote) = V4Parser.parseInput(bytes(quote));
+        if (!success) {
+            return (DEBUG_STAGE_PARSE_FAILED, 0, 0, 0, 0x000000000000, 0x0, 0, 0);
+        }
+
+        teeTcbSvn = parsedQuote.body.teeTcbSvn;
+        qeIsvProdId = parsedQuote.qeReportCertificationData.qeReport.isvProdId;
+        qeIsvSvn = parsedQuote.qeReportCertificationData.qeReport.isvSvn;
+
+        bool quoteSigVerified =
+            _ecdsaVerify(sha256(parsedQuote.signedData), parsedQuote.quoteSignature, parsedQuote.attestationKey);
+        if (!quoteSigVerified) {
+            return (DEBUG_STAGE_QUOTE_SIGNATURE_FAILED, 0, 0, 0, 0x000000000000, teeTcbSvn, qeIsvProdId, qeIsvSvn);
+        }
+
+        if (parsedQuote.qeReportCertificationData.certification.decodedCertDataArray.length != 3) {
+            return (DEBUG_STAGE_CERT_CHAIN_LENGTH_FAILED, 0, 0, 0, 0x000000000000, teeTcbSvn, qeIsvProdId, qeIsvSvn);
+        }
+
+        X509CertObj[] memory parsedCerts = new X509CertObj[](3);
+        PCKCertTCB memory pckTcb;
+        for (uint256 i = 0; i < 3; i++) {
+            bytes memory der = parsedQuote.qeReportCertificationData.certification.decodedCertDataArray[i];
+            parsedCerts[i] = pckHelper.parseX509DER(der);
+            if (i == 0) {
+                pckTcb = _parsePck(der, parsedCerts[i].extensionPtr);
+            }
+        }
+        pcesvn = pckTcb.pcesvn;
+        fmspc = bytes6(pckTcb.fmspcBytes);
+
+        if (!_verifyCertChain(parsedCerts)) {
+            return (DEBUG_STAGE_CERT_CHAIN_FAILED, 0, 0, pcesvn, fmspc, teeTcbSvn, qeIsvProdId, qeIsvSvn);
+        }
+
+        bool qeReportSigVerified = _ecdsaVerify(
+            sha256(parsedQuote.rawQeReport),
+            parsedQuote.qeReportCertificationData.qeReportSignature,
+            parsedCerts[0].subjectPublicKey
+        );
+        if (!qeReportSigVerified) {
+            return (
+                DEBUG_STAGE_QE_REPORT_SIGNATURE_FAILED,
+                0,
+                0,
+                pcesvn,
+                fmspc,
+                teeTcbSvn,
+                qeIsvProdId,
+                qeIsvSvn
+            );
+        }
+
+        EnclaveIdTcbStatus qeTcbStatus;
+        bool enclaveIdentityVerified;
+        (enclaveIdentityVerified, qeTcbStatus) = _verifyQeReportWithTdIdentity(
+            parsedQuote.qeReportCertificationData.qeReport.miscSelect,
+            parsedQuote.qeReportCertificationData.qeReport.attributes,
+            parsedQuote.qeReportCertificationData.qeReport.mrSigner,
+            parsedQuote.qeReportCertificationData.qeReport.isvProdId,
+            parsedQuote.qeReportCertificationData.qeReport.isvSvn
+        );
+        qeTcbStatusCode = uint8(qeTcbStatus);
+        if (!enclaveIdentityVerified) {
+            return (
+                DEBUG_STAGE_QE_IDENTITY_FAILED,
+                qeTcbStatusCode,
+                0,
+                pcesvn,
+                fmspc,
+                teeTcbSvn,
+                qeIsvProdId,
+                qeIsvSvn
+            );
+        }
+
+        (
+            bool tcbInfoFound,
+            TCBLevelsObj[] memory tcbLevels,
+            TDXModuleIdentity[] memory moduleIdentities
+        ) = _getTdxTcbInfo(bytes6(pckTcb.fmspcBytes));
+        if (!tcbInfoFound) {
+            return (
+                DEBUG_STAGE_TCB_INFO_MISSING,
+                qeTcbStatusCode,
+                0,
+                pcesvn,
+                fmspc,
+                teeTcbSvn,
+                qeIsvProdId,
+                qeIsvSvn
+            );
+        }
+
+        TCBStatus tcbStatus;
+        (success, tcbStatus) = _checkTdxTcbLevels(
+            qeTcbStatus,
+            pckTcb,
+            parsedQuote.body.teeTcbSvn,
+            tcbLevels,
+            moduleIdentities
+        );
+        tcbStatusCode = uint8(tcbStatus);
+        if (!success) {
+            return (
+                DEBUG_STAGE_TCB_LEVEL_FAILED,
+                qeTcbStatusCode,
+                tcbStatusCode,
+                pcesvn,
+                fmspc,
+                teeTcbSvn,
+                qeIsvProdId,
+                qeIsvSvn
+            );
+        }
+
+        return (DEBUG_STAGE_OK, qeTcbStatusCode, tcbStatusCode, pcesvn, fmspc, teeTcbSvn, qeIsvProdId, qeIsvSvn);
+    }
+
+    function _verifyQeReportWithTdIdentity(
+        bytes4 enclaveReportMiscselect,
+        bytes16 enclaveReportAttributes,
+        bytes32 enclaveReportMrsigner,
+        uint16 enclaveReportIsvprodid,
+        uint16 enclaveReportIsvSvn
+    ) private view returns (bool, EnclaveIdTcbStatus status) {
+        bytes32 key = keccak256(abi.encodePacked(uint256(2), uint256(4)));
+        bytes32 attestationId = enclaveIdDao.enclaveIdentityAttestations(key);
+        if (attestationId == bytes32(0)) {
+            return (false, status);
+        }
+
+        bytes memory data = enclaveIdDao.getAttestedData(attestationId);
+        (IdentityObj memory identity,,) = abi.decode(data, (IdentityObj, string, bytes));
+
+        bool miscselectMatched = enclaveReportMiscselect & identity.miscselectMask == identity.miscselect;
+        bool attributesMatched = enclaveReportAttributes & identity.attributesMask == identity.attributes;
+        bool mrsignerMatched = enclaveReportMrsigner == identity.mrsigner;
+        bool isvprodidMatched = enclaveReportIsvprodid == identity.isvprodid;
+
+        bool tcbFound;
+        for (uint256 i = 0; i < identity.tcb.length; i++) {
+            if (identity.tcb[i].isvsvn <= enclaveReportIsvSvn) {
+                tcbFound = true;
+                status = identity.tcb[i].status;
+                break;
+            }
+        }
+
+        return (miscselectMatched && attributesMatched && mrsignerMatched && isvprodidMatched && tcbFound, status);
+    }
+
+    function _getTdxTcbInfo(bytes6 fmspc)
+        private
+        view
+        returns (bool success, TCBLevelsObj[] memory tcbLevels, TDXModuleIdentity[] memory moduleIdentities)
+    {
+        bytes32 key = keccak256(abi.encodePacked(uint8(1), fmspc, uint32(3)));
+        bytes32 attestationId = tcbDao.fmspcTcbInfoAttestations(key);
+        success = attestationId != bytes32(0);
+        if (success) {
+            bytes memory data = tcbDao.getAttestedData(attestationId);
+            (,, moduleIdentities, tcbLevels,,) =
+                abi.decode(data, (TcbInfoBasic, TDXModule, TDXModuleIdentity[], TCBLevelsObj[], string, bytes));
+        }
+    }
+
+    function _checkTdxTcbLevels(
+        EnclaveIdTcbStatus qeTcbStatus,
+        PCKCertTCB memory pckTcb,
+        bytes16 teeTcbSvn,
+        TCBLevelsObj[] memory tcbLevels,
+        TDXModuleIdentity[] memory moduleIdentities
+    ) private pure returns (bool, TCBStatus status) {
+        bool matched;
+        uint256 tdxStartIndex = uint8(teeTcbSvn[1]) >= 1 ? 2 : 0;
+
+        for (uint256 i = 0; i < tcbLevels.length; i++) {
+            TCBLevelsObj memory current = tcbLevels[i];
+            bool pceSvnIsHigherOrGreater = pckTcb.pcesvn >= current.pcesvn;
+            bool cpuSvnsAreHigherOrGreater = _isSvnArrayHigherOrGreater(pckTcb.cpusvns, current.sgxComponentCpuSvns, 0);
+            bool tdxSvnsAreHigherOrGreater = _isBytes16HigherOrGreater(teeTcbSvn, current.tdxSvns, tdxStartIndex);
+            if (pceSvnIsHigherOrGreater && cpuSvnsAreHigherOrGreater && tdxSvnsAreHigherOrGreater) {
+                matched = true;
+                status = _adjustStatusForQe(current.status, qeTcbStatus);
+                break;
+            }
+        }
+
+        if (!matched || status == TCBStatus.TCB_REVOKED || status == TCBStatus.TCB_UNRECOGNIZED) {
+            return (false, status);
+        }
+
+        uint8 tdxModuleVersion = uint8(teeTcbSvn[1]);
+        if (tdxModuleVersion >= 1) {
+            (bool moduleMatched, TCBStatus moduleStatus) =
+                _checkTdxModuleIdentity(teeTcbSvn, tdxModuleVersion, moduleIdentities);
+            if (!moduleMatched) {
+                return (false, moduleStatus);
+            }
+            status = _combineTcbStatuses(status, moduleStatus);
+            if (status == TCBStatus.TCB_REVOKED || status == TCBStatus.TCB_UNRECOGNIZED) {
+                return (false, status);
+            }
+        }
+
+        return (true, status);
+    }
+
+    function _checkTdxModuleIdentity(
+        bytes16 teeTcbSvn,
+        uint8 tdxModuleVersion,
+        TDXModuleIdentity[] memory moduleIdentities
+    ) private pure returns (bool, TCBStatus status) {
+        string memory expectedId = tdxModuleVersion < 10
+            ? string.concat("TDX_0", LibString.toString(uint256(tdxModuleVersion)))
+            : string.concat("TDX_", LibString.toString(uint256(tdxModuleVersion)));
+
+        for (uint256 i = 0; i < moduleIdentities.length; i++) {
+            if (moduleIdentities[i].id.eq(expectedId)) {
+                for (uint256 j = 0; j < moduleIdentities[i].tcbLevels.length; j++) {
+                    if (uint8(teeTcbSvn[0]) >= moduleIdentities[i].tcbLevels[j].isvsvn) {
+                        return (true, moduleIdentities[i].tcbLevels[j].status);
+                    }
+                }
+                return (false, TCBStatus.TCB_UNRECOGNIZED);
+            }
+        }
+
+        return (false, TCBStatus.TCB_UNRECOGNIZED);
+    }
+
+    function _adjustStatusForQe(TCBStatus currentStatus, EnclaveIdTcbStatus qeTcbStatus)
+        private
+        pure
+        returns (TCBStatus status)
+    {
+        status = currentStatus;
+        if (qeTcbStatus == EnclaveIdTcbStatus.SGX_ENCLAVE_REPORT_ISVSVN_OUT_OF_DATE) {
+            if (currentStatus == TCBStatus.OK || currentStatus == TCBStatus.TCB_SW_HARDENING_NEEDED) {
+                status = TCBStatus.TCB_OUT_OF_DATE;
+            }
+            if (
+                currentStatus == TCBStatus.TCB_CONFIGURATION_NEEDED
+                    || currentStatus == TCBStatus.TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED
+            ) {
+                status = TCBStatus.TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
+            }
+        }
+    }
+
+    function _combineTcbStatuses(TCBStatus a, TCBStatus b) private pure returns (TCBStatus) {
+        if (a == TCBStatus.TCB_UNRECOGNIZED || b == TCBStatus.TCB_UNRECOGNIZED) {
+            return TCBStatus.TCB_UNRECOGNIZED;
+        }
+        if (a == TCBStatus.TCB_REVOKED || b == TCBStatus.TCB_REVOKED) {
+            return TCBStatus.TCB_REVOKED;
+        }
+
+        return _severity(a) >= _severity(b) ? a : b;
+    }
+
+    function _severity(TCBStatus status) private pure returns (uint256) {
+        if (status == TCBStatus.TCB_OUT_OF_DATE_CONFIGURATION_NEEDED) return 6;
+        if (status == TCBStatus.TCB_OUT_OF_DATE) return 5;
+        if (status == TCBStatus.TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED) return 4;
+        if (status == TCBStatus.TCB_CONFIGURATION_NEEDED) return 3;
+        if (status == TCBStatus.TCB_SW_HARDENING_NEEDED) return 2;
+        if (status == TCBStatus.OK) return 1;
+        return 0;
+    }
+
+    function _isSvnArrayHigherOrGreater(
+        uint8[] memory lhs,
+        uint8[] memory rhs,
+        uint256 startIndex
+    ) private pure returns (bool) {
+        if (lhs.length != rhs.length) {
+            return false;
+        }
+        for (uint256 i = startIndex; i < lhs.length; i++) {
+            if (lhs[i] < rhs[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function _isBytes16HigherOrGreater(
+        bytes16 lhs,
+        uint8[] memory rhs,
+        uint256 startIndex
+    ) private pure returns (bool) {
+        if (rhs.length != 16) {
+            return false;
+        }
+        for (uint256 i = startIndex; i < 16; i++) {
+            if (uint8(lhs[i]) < rhs[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+}

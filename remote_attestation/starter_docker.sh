@@ -15,15 +15,365 @@ else
     export rpc_url=http://anvil:8545
 fi
 
+CHAIN_ID=$(cast chain-id --rpc-url $rpc_url)
+
 
 
 forge script --rpc-url $rpc_url --broadcast script/Deploy.s.sol
 
-export DEVICE_REGISTRY_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "DeviceRegistry") | .contractAddress' ./broadcast/Deploy.s.sol/31337/run-latest.json)
+export DEVICE_REGISTRY_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "DeviceRegistry") | .contractAddress' ./broadcast/Deploy.s.sol/$CHAIN_ID/run-latest.json)
 
-export AGGREGATOR_SELECTION_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "AggregatorSelection") | .contractAddress' ./broadcast/Deploy.s.sol/31337/run-latest.json)
+export AGGREGATOR_SELECTION_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "AggregatorSelection") | .contractAddress' ./broadcast/Deploy.s.sol/$CHAIN_ID/run-latest.json)
 
-export GMSTORAGE=$(jq -re '.transactions[] | select(.contractName == "GMStorage") | .contractAddress' ./broadcast/Deploy.s.sol/31337/run-latest.json)
+export GMSTORAGE=$(jq -re '.transactions[] | select(.contractName == "GMStorage") | .contractAddress' ./broadcast/Deploy.s.sol/$CHAIN_ID/run-latest.json)
+
+export RISC0_VERIFIER=$(jq -re '.transactions[] | select(.contractName == "RiscZeroGroth16Verifier") | .contractAddress' ./broadcast/Deploy.s.sol/$CHAIN_ID/run-latest.json)
+
+ENABLE_DCAP=${ENABLE_DCAP:-1}
+if [ "$ENABLE_DCAP" = "1" ]; then
+    echo "Deploying Automata DCAP v3 contracts"
+
+    export PRIVATE_KEY=$ETH_WALLET_PRIVATE_KEY
+    export DCAP_IMAGE_ID=${DCAP_IMAGE_ID:-0x97f41badbcc8d79521f10cd076fa7a2ed67b84abe07c496da11a2a708c9e5f14}
+
+    if [ "${DOCKER:-}" != "phala" ]; then
+        FALLBACK_P256_VERIFIER_ADDRESS=0xc2b78104907F722DABAc4C69f826a522B2754De4
+        SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+        P256_ROOT="$SCRIPT_DIR/lib/p256-verifier"
+        P256_SOURCE="$P256_ROOT/src/P256Verifier.sol"
+        if [ ! -f "$P256_SOURCE" ]; then
+            echo "Missing $P256_SOURCE in container. Ensure submodules are initialized and copied into the image."
+            exit 1
+        fi
+
+        P256_RUNTIME=$(forge inspect --root "$P256_ROOT" $P256_SOURCE:P256Verifier deployedBytecode | tr -d '\n')
+        if [ -z "$P256_RUNTIME" ]; then
+            echo "Failed to extract P256Verifier deployed bytecode from $P256_SOURCE"
+            exit 1
+        fi
+
+        cast rpc --rpc-url $rpc_url anvil_setCode $FALLBACK_P256_VERIFIER_ADDRESS $P256_RUNTIME
+
+        P256_MODE=${P256_MODE:-native}
+        if [ "$P256_MODE" = "native" ]; then
+            export P256_VERIFIER_ADDRESS=0x0000000000000000000000000000000000000100
+            echo "Using native P256 precompile at $P256_VERIFIER_ADDRESS"
+        else
+            export P256_VERIFIER_ADDRESS=$FALLBACK_P256_VERIFIER_ADDRESS
+        fi
+
+        echo "Probing effective P256 verifier route"
+        forge script script/ProbeP256Verifier.s.sol --rpc-url $rpc_url
+    else
+        export P256_VERIFIER_ADDRESS=${P256_VERIFIER_ADDRESS:-0xc2b78104907F722DABAc4C69f826a522B2754De4}
+    fi
+
+    PCCS_ROOT=./lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs
+    pushd "$PCCS_ROOT" >/dev/null
+
+    forge script script/helper/DeployHelpers.s.sol --sig "deployEnclaveIdentityHelper()" --broadcast --rpc-url $rpc_url --ffi
+    export ENCLAVE_IDENTITY_HELPER=$(jq -re '.transactions[] | select(.contractName == "EnclaveIdentityHelper") | .contractAddress' ./broadcast/DeployHelpers.s.sol/$CHAIN_ID/deployEnclaveIdentityHelper-latest.json)
+
+    forge script script/helper/DeployHelpers.s.sol --sig "deployFmspcTcbHelper()" --broadcast --rpc-url $rpc_url
+    export FMSPC_TCB_HELPER=$(jq -re '.transactions[] | select(.contractName == "FmspcTcbHelper") | .contractAddress' ./broadcast/DeployHelpers.s.sol/$CHAIN_ID/deployFmspcTcbHelper-latest.json)
+
+    forge script script/helper/DeployHelpers.s.sol --sig "deployPckHelper()" --broadcast --rpc-url $rpc_url
+    export X509_HELPER=$(jq -re '.transactions[] | select(.contractName == "PCKHelper") | .contractAddress' ./broadcast/DeployHelpers.s.sol/$CHAIN_ID/deployPckHelper-latest.json)
+
+    forge script script/helper/DeployHelpers.s.sol --sig "deployX509CrlHelper()" --broadcast --rpc-url $rpc_url
+    export X509_CRL_HELPER=$(jq -re '.transactions[] | select(.contractName == "X509CRLHelper") | .contractAddress' ./broadcast/DeployHelpers.s.sol/$CHAIN_ID/deployX509CrlHelper-latest.json)
+
+    export PCCS_STORAGE=${PCCS_STORAGE:-0x0000000000000000000000000000000000000000}
+    export PCS_DAO=${PCS_DAO:-0x0000000000000000000000000000000000000000}
+
+    forge script script/automata/DeployAutomataDao.s.sol --sig "deployStorage()" --broadcast --rpc-url $rpc_url
+    export PCCS_STORAGE=$(jq -re '.transactions[] | select(.contractName == "AutomataDaoStorage") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployStorage-latest.json 2>/dev/null \
+        || jq -re '.transactions[] | select(.contractName == "AutomataDaoStorage") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
+
+    forge script script/automata/DeployAutomataDao.s.sol --sig "deployPcs()" --broadcast --rpc-url $rpc_url
+    export PCS_DAO=$(jq -re '.transactions[] | select(.contractName == "AutomataPcsDao") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployPcs-latest.json 2>/dev/null \
+        || jq -re '.transactions[] | select(.contractName == "AutomataPcsDao") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
+
+    forge script script/automata/DeployAutomataDao.s.sol --sig "deployPck()" --broadcast --rpc-url $rpc_url
+    export PCK_DAO=$(jq -re '.transactions[] | select(.contractName == "AutomataPckDao") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployPck-latest.json 2>/dev/null \
+        || jq -re '.transactions[] | select(.contractName == "AutomataPckDao") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
+
+    forge script script/automata/DeployAutomataDao.s.sol --sig "deployEnclaveIdDao()" --broadcast --rpc-url $rpc_url
+    export ENCLAVE_ID_DAO=$(jq -re '.transactions[] | select(.contractName == "AutomataEnclaveIdentityDao") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployEnclaveIdDao-latest.json 2>/dev/null \
+        || jq -re '.transactions[] | select(.contractName == "AutomataEnclaveIdentityDao") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
+
+    forge script script/automata/DeployAutomataDao.s.sol --sig "deployFmspcTcbDao()" --broadcast --rpc-url $rpc_url
+    export FMSPC_TCB_DAO=$(jq -re '.transactions[] | select(.contractName == "AutomataFmspcTcbDao") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployFmspcTcbDao-latest.json 2>/dev/null \
+        || jq -re '.transactions[] | select(.contractName == "AutomataFmspcTcbDao") | .contractAddress' \
+        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
+
+    forge script script/automata/ConfigAutomataDao.s.sol --sig "updateStorageDao()" --broadcast --rpc-url $rpc_url
+    forge script script/automata/ConfigAutomataDao.s.sol --sig "updatePcsDependencies()" --broadcast --rpc-url $rpc_url
+
+    popd >/dev/null
+
+    DCAP_ROOT=./lib/automata-dcap-v3-attestation
+    pushd "$DCAP_ROOT" >/dev/null
+
+    export ENCLAVE_IDENTITY_HELPER
+    export FMSPC_TCB_HELPER
+    export X509_HELPER
+    export X509_CRL_HELPER
+    export ENCLAVE_ID_DAO
+    export FMSPC_TCB_DAO
+    export PCK_DAO
+    export PCS_DAO
+    export RISC0_VERIFIER
+
+	    forge script forge-script/v3/DeployDCAPScript.s.sol --broadcast --rpc-url $rpc_url
+	    export DCAP_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "AutomataDcapV3Attestation") | .contractAddress' ./broadcast/DeployDCAPScript.s.sol/$CHAIN_ID/run-latest.json)
+	    echo "AutomataDcapV3Attestation: $DCAP_ADDRESS"
+
+	    popd >/dev/null
+
+	    DEPLOY_TDX_V4_DCAP=${DEPLOY_TDX_V4_DCAP:-1}
+	    if [ "$DEPLOY_TDX_V4_DCAP" = "1" ]; then
+	        forge script script/DeployTDXV4Attestation.s.sol --broadcast --rpc-url $rpc_url
+	        export DCAP_TDX_V4_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "AutomataDcapTdxV4Attestation") | .contractAddress' ./broadcast/DeployTDXV4Attestation.s.sol/$CHAIN_ID/run-latest.json)
+	        echo "AutomataDcapTdxV4Attestation: $DCAP_TDX_V4_ADDRESS"
+	    fi
+
+	    UPLOAD_PCCS_COLLATERALS=${UPLOAD_PCCS_COLLATERALS:-1}
+	    if [ "$UPLOAD_PCCS_COLLATERALS" = "1" ]; then
+        PCCS_QUOTE_PATH=${PCCS_QUOTE_PATH:-./apps/data/phala_tdx_quote}
+        PCCS_TMP_DIR=${PCCS_TMP_DIR:-./apps/data/pccs_temp}
+        mkdir -p "$PCCS_TMP_DIR"
+        echo "PCCS_TMP_DIR: $PCCS_TMP_DIR"
+        if [ -z "${PCCS_FMSPC:-}" ] && [ -f "$PCCS_QUOTE_PATH" ]; then
+            PCCS_TMP_DIR=${PCCS_TMP_DIR:-$(mktemp -d)}
+            PCCS_PCK_CERT="$PCCS_TMP_DIR/pck_cert.pem"
+
+            PYTHON_BIN=${PYTHON_BIN:-}
+            if [ -z "$PYTHON_BIN" ]; then
+                if command -v python3 >/dev/null 2>&1; then
+                    PYTHON_BIN=python3
+                elif command -v python >/dev/null 2>&1; then
+                    PYTHON_BIN=python
+                fi
+            fi
+
+            if [ -z "$PYTHON_BIN" ]; then
+                echo "python3/python not found; skipping PCCS_FMSPC extraction"
+            else
+                "$PYTHON_BIN" - <<'PY' "$PCCS_QUOTE_PATH" "$PCCS_PCK_CERT"
+import sys
+
+quote_path = sys.argv[1]
+out_cert = sys.argv[2]
+
+data = open(quote_path, "rb").read()
+text = data.strip()
+
+def is_hex_blob(blob: bytes) -> bool:
+    if not blob:
+        return False
+    for b in blob:
+        if b not in b"0123456789abcdefABCDEF\n\r \t":
+            return False
+    return True
+
+if is_hex_blob(text):
+    hex_str = b"".join(text.split())
+    data = bytes.fromhex(hex_str.decode("ascii"))
+
+begin = b"-----BEGIN CERTIFICATE-----"
+end = b"-----END CERTIFICATE-----"
+start = data.find(begin)
+if start == -1:
+    sys.exit(1)
+stop = data.find(end, start)
+if stop == -1:
+    sys.exit(1)
+
+pem = data[start:stop + len(end)] + b"\n"
+with open(out_cert, "wb") as f:
+    f.write(pem)
+PY
+            fi
+
+            if [ -f "$PCCS_PCK_CERT" ]; then
+                PCCS_FMSPC=$(openssl asn1parse -in "$PCCS_PCK_CERT" -i -dump | awk '
+/1\.2\.840\.113741\.1\.13\.1\.4/ {found=1; next}
+found && /HEX DUMP/ {sub(/^.*HEX DUMP:/,"", $0); gsub(/[^0-9A-Fa-f]/, "", $0); print; exit}
+')
+                if [ -n "$PCCS_FMSPC" ]; then
+                    export PCCS_FMSPC
+                    echo "PCCS_FMSPC extracted: $PCCS_FMSPC"
+                fi
+            fi
+        fi
+
+        PCCS_FETCH=${PCCS_FETCH:-1}
+        if [ "$PCCS_FETCH" = "1" ]; then
+            PCCS_BASE_URL=${PCCS_BASE_URL:-https://pccs.phala.network}
+            PCCS_TEE=${PCCS_TEE:-tdx}
+            if [ -n "${PCCS_FMSPC:-}" ]; then
+                PCCS_TMP_DIR=${PCCS_TMP_DIR:-./apps/data/pccs_temp}
+                mkdir -p "$PCCS_TMP_DIR"
+                echo "PCCS_TMP_DIR: $PCCS_TMP_DIR"
+                PCCS_IDENTITY_JSON_URL="$PCCS_BASE_URL/$PCCS_TEE/certification/v4/qe/identity"
+                PCCS_TCBINFO_JSON_URL="$PCCS_BASE_URL/$PCCS_TEE/certification/v4/tcb?fmspc=$PCCS_FMSPC"
+
+                if ! curl -fsSL "$PCCS_IDENTITY_JSON_URL" -o "$PCCS_TMP_DIR/qe_identity.json"; then
+                    echo "Failed to fetch PCCS identity JSON from $PCCS_IDENTITY_JSON_URL"
+                    exit 1
+                fi
+
+                if ! curl -fsSL "$PCCS_TCBINFO_JSON_URL" -o "$PCCS_TMP_DIR/tcb.json"; then
+                    echo "Failed to fetch PCCS TCBInfo JSON from $PCCS_TCBINFO_JSON_URL"
+                    exit 1
+                fi
+
+                export PCCS_IDENTITY_JSON="$(cat "$PCCS_TMP_DIR/qe_identity.json")"
+                export PCCS_TCBINFO_JSON="$(cat "$PCCS_TMP_DIR/tcb.json")"
+                if [ "$PCCS_TEE" = "tdx" ]; then
+                    export PCCS_QUOTE_VERSION=4
+                fi
+
+	                encode_base64() {
+	                    if command -v xxd >/dev/null 2>&1; then
+	                        printf '0x'
+	                        xxd -p -c 999999 "$1" | tr -d '\n'
+	                    elif command -v od >/dev/null 2>&1; then
+	                        printf '0x'
+	                        od -An -v -tx1 "$1" | tr -d ' \n'
+	                    else
+	                        echo "Neither xxd nor od is available for hex encoding" >&2
+	                        return 1
+	                    fi
+	                }
+
+	                normalize_binary_file() {
+	                    local target_file=$1
+	                    "$PYTHON_BIN" - <<'PY' "$target_file"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+data = path.read_bytes()
+trimmed = data.strip()
+
+if trimmed and all(b in b"0123456789abcdefABCDEF\r\n\t " for b in trimmed):
+    hex_bytes = b"".join(trimmed.split())
+    if len(hex_bytes) % 2 != 0:
+        raise SystemExit(f"hex payload in {path} has odd length")
+    path.write_bytes(bytes.fromhex(hex_bytes.decode("ascii")))
+PY
+	                }
+
+                PYTHON_BIN=${PYTHON_BIN:-}
+                if [ -z "$PYTHON_BIN" ]; then
+                    if command -v python3 >/dev/null 2>&1; then
+                        PYTHON_BIN=python3
+                    elif command -v python >/dev/null 2>&1; then
+                        PYTHON_BIN=python
+                    fi
+                fi
+                if [ -z "$PYTHON_BIN" ]; then
+                    echo "python3/python not found; skipping PCCS cert/CRL fetch"
+                else
+                    TCB_HEADERS="$PCCS_TMP_DIR/tcb.headers"
+                    PCK_HEADERS="$PCCS_TMP_DIR/pck.headers"
+
+                    curl -sS -D "$TCB_HEADERS" "$PCCS_TCBINFO_JSON_URL" -o /dev/null
+                    TCB_CHAIN=$(grep -i "^tcb-info-issuer-chain:" "$TCB_HEADERS" | sed "s/^[^:]*: //")
+                    if [ -z "$TCB_CHAIN" ]; then
+                        echo "Failed to read tcb-info-issuer-chain from PCCS headers"
+                        exit 1
+                    fi
+
+                    printf '%s' "$TCB_CHAIN" | "$PYTHON_BIN" -c 'import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read()))' \
+                        > "$PCCS_TMP_DIR/tcb_chain.pem"
+                    awk '/BEGIN CERTIFICATE/{i++} {print > ("'$PCCS_TMP_DIR'/tcb_cert_" i ".pem")}' \
+                         "$PCCS_TMP_DIR/tcb_chain.pem"
+                    openssl x509 -in "$PCCS_TMP_DIR/tcb_cert_1.pem" -outform der -out "$PCCS_TMP_DIR/tcb_signing.der"
+                    openssl x509 -in "$PCCS_TMP_DIR/tcb_cert_2.pem" -outform der -out "$PCCS_TMP_DIR/root_ca.der"
+
+	                    curl -sS -D "$PCK_HEADERS" "$PCCS_BASE_URL/sgx/certification/v4/pckcrl?ca=platform&encoding=der" \
+	                        -o "$PCCS_TMP_DIR/pckcrl.der"
+	                    normalize_binary_file "$PCCS_TMP_DIR/pckcrl.der"
+	                    PCK_CHAIN=$(grep -i "^sgx-pck-crl-issuer-chain:" "$PCK_HEADERS" | sed "s/^[^:]*: //")
+	                    if [ -z "$PCK_CHAIN" ]; then
+	                        echo "Failed to read sgx-pck-crl-issuer-chain from PCCS headers"
+	                        exit 1
+                    fi
+
+                    printf '%s' "$PCK_CHAIN" | "$PYTHON_BIN" -c 'import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read()))' \
+                        > "$PCCS_TMP_DIR/pck_chain.pem"
+                    awk '/BEGIN CERTIFICATE/{i++} {print > ("'$PCCS_TMP_DIR'/pck_cert_" i ".pem")}' \
+                         "$PCCS_TMP_DIR/pck_chain.pem"
+                    openssl x509 -in "$PCCS_TMP_DIR/pck_cert_1.pem" -outform der -out "$PCCS_TMP_DIR/platform_ca.der"
+
+	                    curl -sS "$PCCS_BASE_URL/sgx/certification/v4/rootcacrl?encoding=der" \
+	                        -o "$PCCS_TMP_DIR/rootcacrl.der"
+	                    normalize_binary_file "$PCCS_TMP_DIR/rootcacrl.der"
+
+	                    export PCCS_TCB_SIGNING_PATH="$PCCS_TMP_DIR/tcb_signing.der"
+	                    export PCCS_ROOT_CA_PATH="$PCCS_TMP_DIR/root_ca.der"
+	                    export PCCS_PLATFORM_CA_PATH="$PCCS_TMP_DIR/platform_ca.der"
+	                    export PCCS_PLATFORM_CRL_PATH="$PCCS_TMP_DIR/pckcrl.der"
+	                    export PCCS_ROOT_CRL_PATH="$PCCS_TMP_DIR/rootcacrl.der"
+	                    if ! export PCCS_TCB_SIGNING_DER="$(encode_base64 "$PCCS_TMP_DIR/tcb_signing.der")"; then
+	                        echo "Failed to encode $PCCS_TMP_DIR/tcb_signing.der"
+	                        exit 1
+	                    fi
+	                    if ! export PCCS_ROOT_CA_DER="$(encode_base64 "$PCCS_TMP_DIR/root_ca.der")"; then
+	                        echo "Failed to encode $PCCS_TMP_DIR/root_ca.der"
+	                        exit 1
+	                    fi
+	                    if ! export PCCS_PLATFORM_CA_DER="$(encode_base64 "$PCCS_TMP_DIR/platform_ca.der")"; then
+	                        echo "Failed to encode $PCCS_TMP_DIR/platform_ca.der"
+	                        exit 1
+	                    fi
+	                    if ! export PCCS_PLATFORM_CRL_DER="$(encode_base64 "$PCCS_TMP_DIR/pckcrl.der")"; then
+	                        echo "Failed to encode $PCCS_TMP_DIR/pckcrl.der"
+	                        exit 1
+	                    fi
+	                    if ! export PCCS_ROOT_CRL_DER="$(encode_base64 "$PCCS_TMP_DIR/rootcacrl.der")"; then
+	                        echo "Failed to encode $PCCS_TMP_DIR/rootcacrl.der"
+	                        exit 1
+	                    fi
+	                    echo "PCCS certificates prepared in $PCCS_TMP_DIR"
+                    echo "PCCS_TCB_SIGNING_DER prepared"
+                    echo "PCCS_ROOT_CA_DER prepared"
+                    echo "PCCS_PLATFORM_CA_DER prepared"
+                    echo "PCCS_PLATFORM_CRL_DER prepared"
+                    echo "PCCS_ROOT_CRL_DER prepared"
+                fi
+            cast rpc --rpc-url $rpc_url evm_mine
+            fi
+        fi
+
+	        if ! forge script script/UploadPccsCollaterals.s.sol --broadcast --rpc-url $rpc_url --ffi; then
+	            echo "PCCS collateral upload failed"
+	            exit 1
+	        fi
+	        echo "PCCS Collaterals uploaded successfully"
+
+	        VERIFY_TDX_QUOTE_ONCHAIN=${VERIFY_TDX_QUOTE_ONCHAIN:-0}
+	        if [ "$VERIFY_TDX_QUOTE_ONCHAIN" = "1" ] && [ -n "${DCAP_TDX_V4_ADDRESS:-}" ]; then
+	            export QUOTE_PATH="$PCCS_QUOTE_PATH"
+	            if ! forge script script/VerifyTDXV4Quote.s.sol --rpc-url $rpc_url; then
+	                echo "TDX V4 quote verification failed"
+	                exit 1
+	            fi
+	        fi
+	    fi
+fi
 
 
 #export ADDRESS_1=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
@@ -117,6 +467,10 @@ echo "PRIVATE_KEY= $PRIVATE_KEY_0"
 
 echo "SEPOLIA_RPC_URL= $rpc_url"
 
+echo "AUTOMATA_DCAP_V3_ ATTESTATION_URL= $DCAP_ADDRESS"
+
+echo "AUTOMATA_DCAP_TDX_V4_ATTESTATION_URL= ${DCAP_TDX_V4_ADDRESS:-}"
+
 echo "===================================================="
 
 #cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_1 $AGGREGATOR_SELECTION_ADDRESS "setGMStorageAddress(address)" $GMSTORAGE
@@ -174,9 +528,6 @@ cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRE
 cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "registerDeviceWithoutProof(address,string,string,bytes)" $ADDRESS_1 "" "" $rsa_public_key_1
 cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "registerDeviceWithoutProof(address,string,string,bytes)" $ADDRESS_2 "" "" $rsa_public_key_2
 
-
-
-
 #echo "Authorized Workers 0 to 19"
 #cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "authorizeAddress(address)" $ADDRESS_0
 #cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "authorizeAddress(address)" $ADDRESS_1
@@ -233,6 +584,12 @@ else
         curl -sSf -X POST "http://ipfs:5001/api/v0/pin/add?arg=${INITIAL_GM_CID}"
         curl -sSf -X POST "http://ipfs:5001/api/v0/files/cp?arg=/ipfs/${INITIAL_GM_CID}&arg=/start"
     fi
+fi
+
+KEEP_ALIVE=${KEEP_ALIVE:-0}
+if [ "$KEEP_ALIVE" = "1" ]; then
+    echo "KEEP_ALIVE=1: keeping container running"
+    tail -f /dev/null
 fi
 
 ### Signature und public key registration

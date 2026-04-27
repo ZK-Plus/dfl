@@ -4,9 +4,16 @@ out = "out"
 libs = ["lib"]
 test = "tests"
 ffi = true
+optimizer = true
+optimizer_runs = 200
+via_ir = true
 remappings = [
   "smart_contract/=../smart_contract/src/"
 ]
-allow_paths = ["../smart_contract/src"]
-
-# See more config options https://github.com/foundry-rs/foundry/tree/master/config
+allow_paths = ["../smart_contract/src", "./tmp", "./lib/automata-dcap-v3-attestation/assets", "./lib/automata-dcap-v3-attestation/assets/0624", "./lib", "./apps/data", "./apps/data/pccs_temp", "./tmp_*", "./tmp.*", "./tmp/", "/tmp", "/tmp/*", "/tmp/**", "./tmp.*", "./tmp/**", "./tmp/*", "./tmp/**", "./tmp", "./tmp/*", "./tmp/**", "assets", "assets/0624"]
+fs_permissions = [
+  { access = "read", path = "./apps/data" },
+  { access = "read", path = "./apps/data/pccs_temp" },
+  { access = "read", path = "./lib/automata-dcap-v3-attestation/assets" },
+  { access = "read", path = "./lib/automata-dcap-v3-attestation/assets/0624" }
+]

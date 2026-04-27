@@ -7,3 +7,8 @@ node_modules/
 .env
 cache/
 node_server/.env
+remote_attestation/target/
+remote_attestation/methods/guest/target/
+remote_attestation/out/
+remote_attestation/broadcast/
+remote_attestation/cache/
