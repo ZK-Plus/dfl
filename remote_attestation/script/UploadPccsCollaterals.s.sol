@@ -52,7 +52,7 @@ contract UploadPccsCollaterals is Script {
         pcsDao.upsertPckCrl(CA.PLATFORM, platformCrlDer);
         pcsDao.upsertRootCACrl(rootCrlDer);
 
-        IdentityObj memory identity = EnclaveIdentityHelper(enclaveIdHelperAddr).parseIdentityString(
+        (IdentityObj memory identity,) = EnclaveIdentityHelper(enclaveIdHelperAddr).parseIdentityString(
             identityJson.identityStr
         );
 

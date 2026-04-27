@@ -14,8 +14,43 @@ if [ "${DOCKER:-}" = "phala" ]; then
 else
     export rpc_url=http://anvil:8545
 fi
+export RPC_URL=$rpc_url
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
 CHAIN_ID=$(cast chain-id --rpc-url $rpc_url)
+
+require_address() {
+    local name=$1
+    local value=$2
+
+    if ! printf '%s' "$value" | grep -Eq '^0x[0-9a-fA-F]{40}$'; then
+        echo "Invalid $name address: $value"
+        exit 1
+    fi
+}
+
+authorize_pccs_reader() {
+    local caller=$1
+
+    if [ -z "$caller" ]; then
+        return 0
+    fi
+
+    require_address PCCS_READER "$caller"
+
+    pushd "$PCCS_ROOT" >/dev/null || {
+        echo "Failed to enter PCCS root: $PCCS_ROOT"
+        exit 1
+    }
+    if ! forge script script/automata/ConfigAutomataDao.s.sol \
+        --sig "setAuthorizedCaller(address,bool)" "$caller" true \
+        --broadcast --rpc-url $rpc_url; then
+        echo "Failed to authorize PCCS reader: $caller"
+        popd >/dev/null
+        exit 1
+    fi
+    popd >/dev/null
+}
 
 
 
@@ -38,7 +73,6 @@ if [ "$ENABLE_DCAP" = "1" ]; then
 
     if [ "${DOCKER:-}" != "phala" ]; then
         FALLBACK_P256_VERIFIER_ADDRESS=0xc2b78104907F722DABAc4C69f826a522B2754De4
-        SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
         P256_ROOT="$SCRIPT_DIR/lib/p256-verifier"
         P256_SOURCE="$P256_ROOT/src/P256Verifier.sol"
         if [ ! -f "$P256_SOURCE" ]; then
@@ -68,8 +102,14 @@ if [ "$ENABLE_DCAP" = "1" ]; then
         export P256_VERIFIER_ADDRESS=${P256_VERIFIER_ADDRESS:-0xc2b78104907F722DABAc4C69f826a522B2754De4}
     fi
 
-    PCCS_ROOT=./lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs
-    pushd "$PCCS_ROOT" >/dev/null
+    PCCS_ROOT="$SCRIPT_DIR/lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs"
+    pushd "$PCCS_ROOT" >/dev/null || {
+        echo "Failed to enter PCCS root: $PCCS_ROOT"
+        exit 1
+    }
+
+    export OWNER=$(cast wallet address --private-key "$ETH_WALLET_PRIVATE_KEY")
+    require_address OWNER "$OWNER"
 
     forge script script/helper/DeployHelpers.s.sol --sig "deployEnclaveIdentityHelper()" --broadcast --rpc-url $rpc_url --ffi
     export ENCLAVE_IDENTITY_HELPER=$(jq -re '.transactions[] | select(.contractName == "EnclaveIdentityHelper") | .contractAddress' ./broadcast/DeployHelpers.s.sol/$CHAIN_ID/deployEnclaveIdentityHelper-latest.json)
@@ -83,46 +123,43 @@ if [ "$ENABLE_DCAP" = "1" ]; then
     forge script script/helper/DeployHelpers.s.sol --sig "deployX509CrlHelper()" --broadcast --rpc-url $rpc_url
     export X509_CRL_HELPER=$(jq -re '.transactions[] | select(.contractName == "X509CRLHelper") | .contractAddress' ./broadcast/DeployHelpers.s.sol/$CHAIN_ID/deployX509CrlHelper-latest.json)
 
-    export PCCS_STORAGE=${PCCS_STORAGE:-0x0000000000000000000000000000000000000000}
-    export PCS_DAO=${PCS_DAO:-0x0000000000000000000000000000000000000000}
+    PCCS_DEPLOYMENT_FILE="./deployment/$CHAIN_ID.json"
 
-    forge script script/automata/DeployAutomataDao.s.sol --sig "deployStorage()" --broadcast --rpc-url $rpc_url
-    export PCCS_STORAGE=$(jq -re '.transactions[] | select(.contractName == "AutomataDaoStorage") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployStorage-latest.json 2>/dev/null \
-        || jq -re '.transactions[] | select(.contractName == "AutomataDaoStorage") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
+    if [ ! -f "$PCCS_DEPLOYMENT_FILE" ]; then
+        echo "Missing helper deployment file before DAO deploy: $PCCS_DEPLOYMENT_FILE"
+        exit 1
+    fi
 
-    forge script script/automata/DeployAutomataDao.s.sol --sig "deployPcs()" --broadcast --rpc-url $rpc_url
-    export PCS_DAO=$(jq -re '.transactions[] | select(.contractName == "AutomataPcsDao") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployPcs-latest.json 2>/dev/null \
-        || jq -re '.transactions[] | select(.contractName == "AutomataPcsDao") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
+    if ! forge script script/automata/DeployAutomataDao.s.sol \
+        --sig "deployAll(bool,bool)" true true \
+        --broadcast --rpc-url $rpc_url; then
+        echo "Failed to deploy Automata PCCS DAO suite"
+        exit 1
+    fi
 
-    forge script script/automata/DeployAutomataDao.s.sol --sig "deployPck()" --broadcast --rpc-url $rpc_url
-    export PCK_DAO=$(jq -re '.transactions[] | select(.contractName == "AutomataPckDao") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployPck-latest.json 2>/dev/null \
-        || jq -re '.transactions[] | select(.contractName == "AutomataPckDao") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
+    if [ ! -f "$PCCS_DEPLOYMENT_FILE" ]; then
+        echo "Missing PCCS deployment file: $PCCS_DEPLOYMENT_FILE"
+        exit 1
+    fi
+    export PCCS_STORAGE=$(jq -re '.AutomataDaoStorage' "$PCCS_DEPLOYMENT_FILE")
+    export PCS_DAO=$(jq -re '.AutomataPcsDao' "$PCCS_DEPLOYMENT_FILE")
+    export PCK_DAO=$(jq -re '.AutomataPckDao' "$PCCS_DEPLOYMENT_FILE")
+    export ENCLAVE_ID_DAO=$(jq -re '.AutomataEnclaveIdentityDao' "$PCCS_DEPLOYMENT_FILE")
+    export FMSPC_TCB_DAO=$(jq -re '.AutomataFmspcTcbDao' "$PCCS_DEPLOYMENT_FILE")
 
-    forge script script/automata/DeployAutomataDao.s.sol --sig "deployEnclaveIdDao()" --broadcast --rpc-url $rpc_url
-    export ENCLAVE_ID_DAO=$(jq -re '.transactions[] | select(.contractName == "AutomataEnclaveIdentityDao") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployEnclaveIdDao-latest.json 2>/dev/null \
-        || jq -re '.transactions[] | select(.contractName == "AutomataEnclaveIdentityDao") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
-
-    forge script script/automata/DeployAutomataDao.s.sol --sig "deployFmspcTcbDao()" --broadcast --rpc-url $rpc_url
-    export FMSPC_TCB_DAO=$(jq -re '.transactions[] | select(.contractName == "AutomataFmspcTcbDao") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/deployFmspcTcbDao-latest.json 2>/dev/null \
-        || jq -re '.transactions[] | select(.contractName == "AutomataFmspcTcbDao") | .contractAddress' \
-        ./broadcast/DeployAutomataDao.s.sol/$CHAIN_ID/run-latest.json)
-
-    forge script script/automata/ConfigAutomataDao.s.sol --sig "updateStorageDao()" --broadcast --rpc-url $rpc_url
-    forge script script/automata/ConfigAutomataDao.s.sol --sig "updatePcsDependencies()" --broadcast --rpc-url $rpc_url
+    require_address PCCS_STORAGE "$PCCS_STORAGE"
+    require_address PCS_DAO "$PCS_DAO"
+    require_address PCK_DAO "$PCK_DAO"
+    require_address ENCLAVE_ID_DAO "$ENCLAVE_ID_DAO"
+    require_address FMSPC_TCB_DAO "$FMSPC_TCB_DAO"
 
     popd >/dev/null
 
-    DCAP_ROOT=./lib/automata-dcap-v3-attestation
-    pushd "$DCAP_ROOT" >/dev/null
+    DCAP_ROOT="$SCRIPT_DIR/lib/automata-dcap-v3-attestation"
+    pushd "$DCAP_ROOT" >/dev/null || {
+        echo "Failed to enter DCAP root: $DCAP_ROOT"
+        exit 1
+    }
 
     export ENCLAVE_IDENTITY_HELPER
     export FMSPC_TCB_HELPER
@@ -137,6 +174,7 @@ if [ "$ENABLE_DCAP" = "1" ]; then
 	    forge script forge-script/v3/DeployDCAPScript.s.sol --broadcast --rpc-url $rpc_url
 	    export DCAP_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "AutomataDcapV3Attestation") | .contractAddress' ./broadcast/DeployDCAPScript.s.sol/$CHAIN_ID/run-latest.json)
 	    echo "AutomataDcapV3Attestation: $DCAP_ADDRESS"
+        authorize_pccs_reader "$DCAP_ADDRESS"
 
 	    popd >/dev/null
 
@@ -145,6 +183,7 @@ if [ "$ENABLE_DCAP" = "1" ]; then
 	        forge script script/DeployTDXV4Attestation.s.sol --broadcast --rpc-url $rpc_url
 	        export DCAP_TDX_V4_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "AutomataDcapTdxV4Attestation") | .contractAddress' ./broadcast/DeployTDXV4Attestation.s.sol/$CHAIN_ID/run-latest.json)
 	        echo "AutomataDcapTdxV4Attestation: $DCAP_TDX_V4_ADDRESS"
+            authorize_pccs_reader "$DCAP_TDX_V4_ADDRESS"
 	    fi
 
 	    UPLOAD_PCCS_COLLATERALS=${UPLOAD_PCCS_COLLATERALS:-1}

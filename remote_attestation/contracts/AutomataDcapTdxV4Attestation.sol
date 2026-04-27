@@ -3,10 +3,13 @@ pragma solidity ^0.8.20;
 
 import {IAttestation} from "automata-dcap-v3-attestation/interfaces/IAttestation.sol";
 import {
+    EnclaveIdentityJsonObj,
     IdentityObj,
     EnclaveIdTcbStatus
 } from "@automata-network/on-chain-pccs/helpers/EnclaveIdentityHelper.sol";
 import {
+    FmspcTcbHelper,
+    TcbInfoJsonObj,
     TcbInfoBasic,
     TCBLevelsObj,
     TDXModule,
@@ -274,14 +277,15 @@ contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable
         uint16 enclaveReportIsvprodid,
         uint16 enclaveReportIsvSvn
     ) private view returns (bool, EnclaveIdTcbStatus status) {
-        bytes32 key = keccak256(abi.encodePacked(uint256(2), uint256(4)));
-        bytes32 attestationId = enclaveIdDao.enclaveIdentityAttestations(key);
-        if (attestationId == bytes32(0)) {
+        bytes32 key = enclaveIdDao.ENCLAVE_ID_KEY(uint256(2), uint256(4));
+        bytes memory data = enclaveIdDao.getAttestedData(key);
+        if (data.length == 0) {
             return (false, status);
         }
 
-        bytes memory data = enclaveIdDao.getAttestedData(attestationId);
-        (IdentityObj memory identity,,) = abi.decode(data, (IdentityObj, string, bytes));
+        (IdentityObj memory identity, EnclaveIdentityJsonObj memory enclaveIdentityObj) =
+            abi.decode(data, (IdentityObj, EnclaveIdentityJsonObj));
+        enclaveIdentityObj;
 
         bool miscselectMatched = enclaveReportMiscselect & identity.miscselectMask == identity.miscselect;
         bool attributesMatched = enclaveReportAttributes & identity.attributesMask == identity.attributes;
@@ -305,14 +309,30 @@ contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable
         view
         returns (bool success, TCBLevelsObj[] memory tcbLevels, TDXModuleIdentity[] memory moduleIdentities)
     {
-        bytes32 key = keccak256(abi.encodePacked(uint8(1), fmspc, uint32(3)));
-        bytes32 attestationId = tcbDao.fmspcTcbInfoAttestations(key);
-        success = attestationId != bytes32(0);
-        if (success) {
-            bytes memory data = tcbDao.getAttestedData(attestationId);
-            (,, moduleIdentities, tcbLevels,,) =
-                abi.decode(data, (TcbInfoBasic, TDXModule, TDXModuleIdentity[], TCBLevelsObj[], string, bytes));
+        bytes32 key = tcbDao.FMSPC_TCB_KEY(uint8(1), fmspc, uint32(3));
+        bytes memory data = tcbDao.getAttestedData(key);
+        if (data.length == 0) {
+            return (false, tcbLevels, moduleIdentities);
         }
+
+        (, , bytes memory encodedModuleIdentities, bytes memory encodedTcbLevels,) =
+            abi.decode(data, (TcbInfoBasic, TDXModule, bytes, bytes, TcbInfoJsonObj));
+
+        FmspcTcbHelper helper = tcbDao.FmspcTcbLib();
+
+        bytes[] memory moduleIdentityBlobs = abi.decode(encodedModuleIdentities, (bytes[]));
+        moduleIdentities = new TDXModuleIdentity[](moduleIdentityBlobs.length);
+        for (uint256 i = 0; i < moduleIdentityBlobs.length; i++) {
+            moduleIdentities[i] = helper.tdxModuleIdentityFromBytes(moduleIdentityBlobs[i]);
+        }
+
+        bytes[] memory tcbLevelBlobs = abi.decode(encodedTcbLevels, (bytes[]));
+        tcbLevels = new TCBLevelsObj[](tcbLevelBlobs.length);
+        for (uint256 i = 0; i < tcbLevelBlobs.length; i++) {
+            tcbLevels[i] = helper.tcbLevelsObjFromBytes(tcbLevelBlobs[i]);
+        }
+
+        success = true;
     }
 
     function _checkTdxTcbLevels(
@@ -329,7 +349,8 @@ contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable
             TCBLevelsObj memory current = tcbLevels[i];
             bool pceSvnIsHigherOrGreater = pckTcb.pcesvn >= current.pcesvn;
             bool cpuSvnsAreHigherOrGreater = _isSvnArrayHigherOrGreater(pckTcb.cpusvns, current.sgxComponentCpuSvns, 0);
-            bool tdxSvnsAreHigherOrGreater = _isBytes16HigherOrGreater(teeTcbSvn, current.tdxSvns, tdxStartIndex);
+            bool tdxSvnsAreHigherOrGreater =
+                _isBytes16HigherOrGreater(teeTcbSvn, current.tdxComponentCpuSvns, tdxStartIndex);
             if (pceSvnIsHigherOrGreater && cpuSvnsAreHigherOrGreater && tdxSvnsAreHigherOrGreater) {
                 matched = true;
                 status = _adjustStatusForQe(current.status, qeTcbStatus);
