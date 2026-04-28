@@ -80,6 +80,21 @@ contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable
         }
     }
 
+    function verifyParsedQuoteAndAttestOnChain(V4Struct.ParsedV4Quote calldata parsedQuote)
+        external
+        view
+        returns (bytes memory output)
+    {
+        // Parsed quotes can be prepared off-chain to avoid the most expensive on-chain parsing work.
+        V4Struct.ParsedV4Quote memory parsedQuoteMemory = parsedQuote;
+        V4Parser.validateParsedInput(parsedQuoteMemory);
+        bool verified;
+        (verified, output) = _verifyParsedQuote(parsedQuoteMemory);
+        if (!verified) {
+            revert Failed_To_Verify_Quote();
+        }
+    }
+
     function verifyAndAttestWithZKProof(bytes calldata, bytes calldata)
         external
         pure
@@ -116,25 +131,11 @@ contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable
     }
 
     function _verify(bytes calldata quote) private view returns (bool verified, bytes memory output) {
-        (
-            uint8 stage,
-            ,
-            uint8 tcbStatusCode,
-            ,
-            bytes6 fmspcBytes,
-            ,
-            ,
-        ) = _debugVerify(quote);
-        if (stage != DEBUG_STAGE_OK) {
-            return (false, output);
-        }
-
         (bool success, V4Struct.ParsedV4Quote memory parsedQuote) = V4Parser.parseInput(bytes(quote));
         if (!success) {
             return (false, output);
         }
-        output = abi.encodePacked(TCBStatus(tcbStatusCode), parsedQuote.body.mrtd, parsedQuote.body.reportData, fmspcBytes);
-        verified = true;
+        return _verifyParsedQuote(parsedQuote);
     }
 
     function _debugVerify(bytes calldata quote)
@@ -156,6 +157,45 @@ contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable
             return (DEBUG_STAGE_PARSE_FAILED, 0, 0, 0, 0x000000000000, 0x0, 0, 0);
         }
 
+        return _debugVerifyParsedQuote(parsedQuote);
+    }
+
+    function _verifyParsedQuote(V4Struct.ParsedV4Quote memory parsedQuote)
+        private
+        view
+        returns (bool verified, bytes memory output)
+    {
+        (
+            uint8 stage,
+            ,
+            uint8 tcbStatusCode,
+            ,
+            bytes6 fmspcBytes,
+            ,
+            ,
+        ) = _debugVerifyParsedQuote(parsedQuote);
+        if (stage != DEBUG_STAGE_OK) {
+            return (false, output);
+        }
+
+        output = abi.encodePacked(TCBStatus(tcbStatusCode), parsedQuote.body.mrtd, parsedQuote.body.reportData, fmspcBytes);
+        verified = true;
+    }
+
+    function _debugVerifyParsedQuote(V4Struct.ParsedV4Quote memory parsedQuote)
+        private
+        view
+        returns (
+            uint8 stage,
+            uint8 qeTcbStatusCode,
+            uint8 tcbStatusCode,
+            uint16 pcesvn,
+            bytes6 fmspc,
+            bytes16 teeTcbSvn,
+            uint16 qeIsvProdId,
+            uint16 qeIsvSvn
+        )
+    {
         teeTcbSvn = parsedQuote.body.teeTcbSvn;
         qeIsvProdId = parsedQuote.qeReportCertificationData.qeReport.isvProdId;
         qeIsvSvn = parsedQuote.qeReportCertificationData.qeReport.isvSvn;
@@ -245,8 +285,9 @@ contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable
             );
         }
 
+        bool tcbVerified;
         TCBStatus tcbStatus;
-        (success, tcbStatus) = _checkTdxTcbLevels(
+        (tcbVerified, tcbStatus) = _checkTdxTcbLevels(
             qeTcbStatus,
             pckTcb,
             parsedQuote.body.teeTcbSvn,
@@ -254,7 +295,7 @@ contract AutomataDcapTdxV4Attestation is IAttestation, PEMCertChainBase, Ownable
             moduleIdentities
         );
         tcbStatusCode = uint8(tcbStatus);
-        if (!success) {
+        if (!tcbVerified) {
             return (
                 DEBUG_STAGE_TCB_LEVEL_FAILED,
                 qeTcbStatusCode,

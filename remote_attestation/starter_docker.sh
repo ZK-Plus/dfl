@@ -66,7 +66,7 @@ export RISC0_VERIFIER=$(jq -re '.transactions[] | select(.contractName == "RiscZ
 
 ENABLE_DCAP=${ENABLE_DCAP:-1}
 if [ "$ENABLE_DCAP" = "1" ]; then
-    echo "Deploying Automata DCAP v3 contracts"
+    echo "Deploying Automata DCAP v4 contracts"
 
     export PRIVATE_KEY=$ETH_WALLET_PRIVATE_KEY
     export DCAP_IMAGE_ID=${DCAP_IMAGE_ID:-0x97f41badbcc8d79521f10cd076fa7a2ed67b84abe07c496da11a2a708c9e5f14}

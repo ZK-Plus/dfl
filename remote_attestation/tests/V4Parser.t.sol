@@ -20,4 +20,25 @@ contract V4ParserTest is Test {
         assertEq(parsedQuote.rawQeReport.length, 384);
         assertEq(parsedQuote.qeReportCertificationData.certification.decodedCertDataArray.length, 3);
     }
+
+    function test_validateParsedInput_acceptsValidParsedQuote() external view {
+        string memory path = string.concat(vm.projectRoot(), "/apps/data/phala_tdx_quote");
+        bytes memory quote = vm.parseBytes(string.concat("0x", vm.readFile(path)));
+
+        (bool success, V4Struct.ParsedV4Quote memory parsedQuote) = V4Parser.parseInput(quote);
+
+        assertTrue(success);
+        V4Parser.validateParsedInput(parsedQuote);
+    }
+
+    function test_validateParsedInput_benchmark() external {
+        vm.pauseGasMetering();
+        string memory path = string.concat(vm.projectRoot(), "/apps/data/phala_tdx_quote");
+        bytes memory quote = vm.parseBytes(string.concat("0x", vm.readFile(path)));
+        (bool success, V4Struct.ParsedV4Quote memory parsedQuote) = V4Parser.parseInput(quote);
+        vm.resumeGasMetering();
+
+        assertTrue(success);
+        V4Parser.validateParsedInput(parsedQuote);
+    }
 }

@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {AutomataDcapTdxV4Attestation} from "../contracts/AutomataDcapTdxV4Attestation.sol";
+import {V4Parser} from "../contracts/tdx/QuoteV4Auth/V4Parser.sol";
+import {V4Struct} from "../contracts/tdx/QuoteV4Auth/V4Struct.sol";
 import {P256Probe} from "./common/P256Probe.sol";
 
 contract VerifyTDXV4Quote is Script, P256Probe {
@@ -20,6 +22,20 @@ contract VerifyTDXV4Quote is Script, P256Probe {
         console2.log("P256 native probe:", _boolLabel(nativeSupported));
         console2.log("P256 fallback probe:", _boolLabel(fallbackSupported));
         console2.log("P256 effective route:", _routeLabel(route));
+
+        (bool parsedSuccessfully, V4Struct.ParsedV4Quote memory parsedQuote) = V4Parser.parseInput(quoteBytes);
+        if (parsedSuccessfully) {
+            try AutomataDcapTdxV4Attestation(dcapAddr).verifyParsedQuoteAndAttestOnChain(parsedQuote) returns (
+                bytes memory output
+            ) {
+                console2.log("TDX V4 verification succeeded");
+                console2.logBytes(output);
+                if (output.length > 0) {
+                    console2.log("TCB status:", uint8(output[0]));
+                }
+                return;
+            } catch {}
+        }
 
         try AutomataDcapTdxV4Attestation(dcapAddr).verifyAndAttestOnChain(quoteBytes) returns (bytes memory output) {
             console2.log("TDX V4 verification succeeded");

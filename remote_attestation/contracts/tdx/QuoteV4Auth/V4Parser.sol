@@ -74,6 +74,62 @@ library V4Parser {
         success = true;
     }
 
+    function validateParsedInput(V4Struct.ParsedV4Quote memory parsedQuote) internal pure {
+        require(parsedQuote.header.version == SUPPORTED_QUOTE_VERSION, "unsupported quote version");
+        require(parsedQuote.header.attestationKeyType == SUPPORTED_ATTESTATION_KEY_TYPE, "unsupported attestation key");
+        require(parsedQuote.header.teeType == SUPPORTED_TEE_TYPE, "unsupported tee type");
+        require(parsedQuote.header.qeVendorId == VALID_QE_VENDOR_ID, "invalid QE vendor");
+        require(parsedQuote.signedData.length == HEADER_SIZE + BODY_SIZE, "invalid signed data length");
+        require(parsedQuote.rawQeReport.length == 384, "invalid QE report length");
+        require(parsedQuote.body.mrtd.length == 48, "invalid mrtd length");
+        require(parsedQuote.body.reportData.length == 64, "invalid report data length");
+        require(
+            parsedQuote.quoteSignature.length == 64 && parsedQuote.attestationKey.length == 64
+                && parsedQuote.qeReportCertificationData.qeReportSignature.length == 64,
+            "invalid ECDSA signature format"
+        );
+        require(
+            parsedQuote.qeReportCertificationData.qeAuthData.parsedDataSize
+                == parsedQuote.qeReportCertificationData.qeAuthData.data.length,
+            "invalid QEAuthData size"
+        );
+        require(
+            parsedQuote.qeReportCertificationData.certification.certType == 5,
+            "certType must be 5: Concatenated PCK Cert Chain (PEM formatted)"
+        );
+        require(parsedQuote.qeReportCertificationData.certification.decodedCertDataArray.length == 3, "3 certs in chain");
+
+        bytes memory signedData = parsedQuote.signedData;
+        bytes memory headerBytes = abi.encodePacked(
+            parsedQuote.header.version,
+            parsedQuote.header.attestationKeyType,
+            parsedQuote.header.teeType,
+            parsedQuote.header.reserved1,
+            parsedQuote.header.reserved2,
+            parsedQuote.header.qeVendorId,
+            parsedQuote.header.userData
+        );
+        require(signedData.equals(0, headerBytes), "header mismatch");
+        require(signedData.equals(HEADER_SIZE, abi.encodePacked(parsedQuote.body.teeTcbSvn)), "teeTcbSvn mismatch");
+        require(signedData.equals(HEADER_SIZE + 136, parsedQuote.body.mrtd), "mrtd mismatch");
+        require(signedData.equals(HEADER_SIZE + 520, parsedQuote.body.reportData), "report data mismatch");
+
+        V3Struct.EnclaveReport memory qeReport = parsedQuote.qeReportCertificationData.qeReport;
+        require(
+            qeReport.reserved3.length == 96 && qeReport.reserved4.length == 60 && qeReport.reportData.length == 64,
+            "QE report has wrong length"
+        );
+
+        bytes memory packedQeReport = V3Parser.packQEReport(qeReport);
+        bytes memory rawQeReport = parsedQuote.rawQeReport;
+        require(rawQeReport.equals(packedQeReport), "QE report mismatch");
+
+        bytes32 expectedHash = bytes32(qeReport.reportData.substring(0, 32));
+        bytes32 computedHash =
+            sha256(abi.encodePacked(parsedQuote.attestationKey, parsedQuote.qeReportCertificationData.qeAuthData.data));
+        require(expectedHash == computedHash, "QE auth hash mismatch");
+    }
+
     function parseBody(bytes memory rawBody) internal pure returns (V4Struct.Body memory body) {
         body.teeTcbSvn = bytes16(rawBody.substring(0, 16));
         body.mrtd = rawBody.substring(136, 48);
