@@ -27,7 +27,7 @@ COPY smart_contract ./smart_contract
 COPY remote_attestation/foundry.toml ./remote_attestation/foundry.toml
 COPY remote_attestation/remappings.txt ./remote_attestation/remappings.txt
 COPY remote_attestation/lib ./remote_attestation/lib
-COPY remote_attestation/broadcast ./remote_attestation/broadcast
+#COPY remote_attestation/broadcast ./remote_attestation/broadcast
 COPY remote_attestation/contracts ./remote_attestation/contracts
 COPY remote_attestation/out ./remote_attestation/out
 COPY remote_attestation/script ./remote_attestation/script

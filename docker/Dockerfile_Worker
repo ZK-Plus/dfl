@@ -1,18 +1,10 @@
-# docker/Dockerfile
-#FROM debian:latest
 FROM node:20-slim
 
 WORKDIR /dfl
 
 COPY cloud_setup/ansible/config ./config
 
-
-
 COPY docker/keys ./keys
-
-#COPY neural_network/data/lm.bin ./node_server/data/lm.bin
-
-#COPY neural_network/data ./node_server/data
 
 RUN apt-get update && \
     apt-get install -y libzmq3-dev && \
@@ -25,7 +17,10 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | b
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \
     nvm install 20
 
-COPY node_server ./node_server
+COPY node_server/package*.json ./node_server/
+WORKDIR /dfl/node_server
+RUN npm ci
+COPY node_server ./
 
 WORKDIR /dfl/node_server
 

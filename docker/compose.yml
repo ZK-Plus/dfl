@@ -1,11 +1,14 @@
 ---
 services:
   anvil:
-    image: ghcr.io/foundry-rs/foundry:latest
+    #image: ghcr.io/foundry-rs/foundry:latest
+    image: ghcr.io/foundry-rs/foundry:${FOUNDRY_IMAGE_TAG:-nightly-dd0a687aa36ec731b6ea2cda2aa4f32e192814fa}
     container_name: anvil
     environment:
       ANVIL_IP_ADDR: "0.0.0.0"
       FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
+      #
+      ANVIL_HARDFORK: ${ANVIL_HARDFORK:-osaka}
     working_dir: /anvil
     ports:
       - "8545:8545"
@@ -14,6 +17,10 @@ services:
     command:
       - --accounts
       - "20"
+      #
+      - --hardfork
+      #
+      - ${ANVIL_HARDFORK:-osaka}
     healthcheck:
       test: ["CMD-SHELL", "cast block-number --rpc-url http://localhost:8545 >/dev/null 2>&1 || exit 1"]
       interval: 2s
@@ -34,18 +41,33 @@ services:
   smart-contracts: 
     build:
       context: ..
-      dockerfile: docker/Dockerfile_Smart_Contracts
-    image: sonak53/dfl-sc:latest
+    #  dockerfile: docker/Dockerfile_Smart_Contracts
+    #image: sonak53/dfl-sc:latest
+      dockerfile: docker/Dockerfile_Master
+      args:
+        FOUNDRY_VERSION: ${FOUNDRY_IMAGE_TAG:-nightly-dd0a687aa36ec731b6ea2cda2aa4f32e192814fa}
+    image: sonak53/dfl-master:latest
     container_name: smart-contracts
     platform: linux/amd64  
     environment:
       FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
       IPFS_PROVIDER: ${IPFS_PROVIDER}
       DOCKER: ${DOCKER}
+      KEEP_ALIVE: ${KEEP_ALIVE}
+      PCCS_FMSPC: ${PCCS_FMSPC}
+      PCCS_FETCH: ${PCCS_FETCH}
+      PCCS_TEE: ${PCCS_TEE}
+      P256_MODE: ${P256_MODE:-native}
+      P256_VERIFIER_ADDRESS: ${P256_VERIFIER_ADDRESS:-}
+      DEPLOY_TDX_V4_DCAP: ${DEPLOY_TDX_V4_DCAP}
+      VERIFY_TDX_QUOTE_ONCHAIN: ${VERIFY_TDX_QUOTE_ONCHAIN}
+      PCCS_QUOTE_PATH: ${PCCS_QUOTE_PATH:-./apps/data/phala_tdx_quote}
       INITIAL_GM_CID: ${INITIAL_GM_CID}
       INITIAL_GM_SIG_CID: ${INITIAL_GM_SIG_CID}
       INITIAL_GM_SIGNER_ADDRESS: ${INITIAL_GM_SIGNER_ADDRESS}
     command: ["/dfl/remote_attestation/starter_docker.sh"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
   #remote-attestation: 
   #  build:
