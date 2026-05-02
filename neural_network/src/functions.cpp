@@ -565,8 +565,6 @@ void federatedAvg(const string &pathToFiles, const string outputPath, int numFil
     MatrixXd sumW3 = MatrixXd::Zero(10, 50);
     MatrixXd sumB3 = MatrixXd::Zero(10, 1);
 
-    int staticFile = 0;
-
     // Read the weights and biases from each file and add them to the sum
     for (int i = 0; i < numFiles; i++)
     {
@@ -583,12 +581,13 @@ void federatedAvg(const string &pathToFiles, const string outputPath, int numFil
         MatrixXd b3 = MatrixXd::Zero(10, 1);
 
         streamoff position = 0;
-        position = read(&w1, position, pathToFiles + "0" + ".bin");
-        position = read(&b1, position, pathToFiles + "0" + ".bin");
-        position = read(&w2, position, pathToFiles + "0" + ".bin");
-        position = read(&b2, position, pathToFiles + "0" + ".bin");
-        position = read(&w3, position, pathToFiles + "0" + ".bin");
-        read(&b3, position, pathToFiles + "0" + ".bin");
+        const string workerModelPath = pathToFiles + std::to_string(i) + ".bin";
+        position = read(&w1, position, workerModelPath);
+        position = read(&b1, position, workerModelPath);
+        position = read(&w2, position, workerModelPath);
+        position = read(&b2, position, workerModelPath);
+        position = read(&w3, position, workerModelPath);
+        read(&b3, position, workerModelPath);
 
         // Add the weights and biases to the sum
         sumW1 += w1;
