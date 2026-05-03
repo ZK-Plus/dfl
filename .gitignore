@@ -12,3 +12,4 @@ remote_attestation/methods/guest/target/
 remote_attestation/out/
 remote_attestation/broadcast/
 remote_attestation/cache/
+zk_inference/out/pk.key
