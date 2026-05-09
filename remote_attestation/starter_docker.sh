@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 
 export ETH_WALLET_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
@@ -614,14 +616,14 @@ echo "Authorization Status:"
 if [ "${DOCKER:-}" = "phala" ]; then
     if [ "${IPFS_PROVIDER:-}" != "pinata" ]; then
         echo "Pinning the initial GM to the IPFS node"
-        curl -sSf -X POST "https://61ecc557e3b36593390057d322d46e9488032c34-5001.dstack-prod5.phala.network/api/v0/pin/add?arg=${INITIAL_GM_CID}"
-        curl -sSf -X POST "https://61ecc557e3b36593390057d322d46e9488032c34-5001.dstack-prod5.phala.network/api/v0/files/cp?arg=/ipfs/${INITIAL_GM_CID}&arg=/start"
+        curl --connect-timeout 5 --max-time 60 -sSf -X POST "https://61ecc557e3b36593390057d322d46e9488032c34-5001.dstack-prod5.phala.network/api/v0/pin/add?arg=${INITIAL_GM_CID}"
+        curl --connect-timeout 5 --max-time 60 -sSf -X POST "https://61ecc557e3b36593390057d322d46e9488032c34-5001.dstack-prod5.phala.network/api/v0/files/cp?arg=/ipfs/${INITIAL_GM_CID}&arg=/start"
     fi
 else
     if [ "${IPFS_PROVIDER:-}" != "pinata" ]; then
         echo "Pinning the initial GM to the local IPFS node"
-        curl -sSf -X POST "http://ipfs:5001/api/v0/pin/add?arg=${INITIAL_GM_CID}"
-        curl -sSf -X POST "http://ipfs:5001/api/v0/files/cp?arg=/ipfs/${INITIAL_GM_CID}&arg=/start"
+        curl --connect-timeout 5 --max-time 60 -sSf -X POST "http://ipfs:5001/api/v0/pin/add?arg=${INITIAL_GM_CID}"
+        curl --connect-timeout 5 --max-time 60 -sSf -X POST "http://ipfs:5001/api/v0/files/cp?arg=/ipfs/${INITIAL_GM_CID}&arg=/start"
     fi
 fi
 
@@ -630,6 +632,9 @@ if [ "$KEEP_ALIVE" = "1" ]; then
     echo "KEEP_ALIVE=1: keeping container running"
     tail -f /dev/null
 fi
+
+echo "starter_docker.sh completed; exiting because KEEP_ALIVE=${KEEP_ALIVE}"
+exit 0
 
 ### Signature und public key registration
 

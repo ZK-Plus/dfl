@@ -1,0 +1,151 @@
+---
+x-worker-build: &worker-build
+  context: ..
+  dockerfile: docker/Dockerfile_Worker_Node_Python
+
+x-worker-env: &worker-env
+  API_KEY: ${API_KEY}
+  API_SECRET: ${API_SECRET}
+  PINATA_JWT: ${PINATA_JWT}
+  IPFS_GATEWAY: ${IPFS_GATEWAY}
+  KUBO_API: ${KUBO_API}
+  KUBO_GATEWAY: ${KUBO_GATEWAY}
+  IPFS_PROVIDER: ${IPFS_PROVIDER}
+  DOCKER: ${DOCKER}
+  REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
+  AGGREGATOR_ADDRESS: ${AGGREGATOR_ADDRESS}
+  GM_STORAGE_ADDRESS: ${GM_STORAGE_ADDRESS}
+  SEPOLIA_RPC_URL: ${RPC_URL}
+  CLIENT_LIMIT: ${CLIENT_LIMIT}
+  EPOCH: ${EPOCH}
+  ROUND: ${ROUND}
+  PYTHON_SERVICE_URL: http://127.0.0.1:8000
+
+x-worker-common: &worker-common
+  image: sonak53/dfl-node-python-worker:latest_local
+  pull_policy: never
+  platform: linux/amd64
+  depends_on:
+    smart-contracts:
+      condition: service_completed_successfully
+  command: ["/dfl/start_node_python_worker.sh"]
+
+services:
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:${FOUNDRY_IMAGE_TAG:-nightly-dd0a687aa36ec731b6ea2cda2aa4f32e192814fa}
+    container_name: anvil
+    environment:
+      ANVIL_IP_ADDR: "0.0.0.0"
+      FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
+      ANVIL_HARDFORK: ${ANVIL_HARDFORK:-osaka}
+    working_dir: /anvil
+    ports:
+      - "8545:8545"
+    entrypoint:
+      - anvil
+    command:
+      - --accounts
+      - "20"
+      - --hardfork
+      - ${ANVIL_HARDFORK:-osaka}
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8545' >/dev/null 2>&1 || exit 1"]
+      interval: 2s
+      timeout: 1s
+      retries: 15
+
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: ipfs_local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4001:4001"
+      - "127.0.0.1:5001:5001"
+      - "127.0.0.1:8080:8080"
+    tmpfs:
+      - /data/ipfs
+    healthcheck:
+      test: ["CMD-SHELL", "ipfs id >/dev/null 2>&1 || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  smart-contracts:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile_Master
+      args:
+        FOUNDRY_VERSION: ${FOUNDRY_IMAGE_TAG:-nightly-dd0a687aa36ec731b6ea2cda2aa4f32e192814fa}
+    image: sonak53/dfl-master:latest
+    container_name: smart-contracts
+    platform: linux/amd64
+    depends_on:
+      anvil:
+        condition: service_healthy
+      ipfs:
+        condition: service_healthy
+    environment:
+      FOUNDRY_DISABLE_NIGHTLY_WARNING: "1"
+      IPFS_PROVIDER: ${IPFS_PROVIDER}
+      DOCKER: ${DOCKER}
+      KEEP_ALIVE: ${KEEP_ALIVE:-0}
+      PCCS_FMSPC: ${PCCS_FMSPC:-20A06F000000}
+      PCCS_FETCH: ${PCCS_FETCH:-1}
+      PCCS_TEE: ${PCCS_TEE:-tdx}
+      P256_MODE: ${P256_MODE:-native}
+      P256_VERIFIER_ADDRESS: ${P256_VERIFIER_ADDRESS:-}
+      DEPLOY_TDX_V4_DCAP: ${DEPLOY_TDX_V4_DCAP:-1}
+      VERIFY_TDX_QUOTE_ONCHAIN: ${VERIFY_TDX_QUOTE_ONCHAIN:-1}
+      PCCS_QUOTE_PATH: ${PCCS_QUOTE_PATH:-./apps/data/phala_tdx_quote}
+      INITIAL_GM_CID: ${INITIAL_GM_CID}
+      INITIAL_GM_SIG_CID: ${INITIAL_GM_SIG_CID}
+      INITIAL_GM_SIGNER_ADDRESS: ${INITIAL_GM_SIGNER_ADDRESS}
+    command: ["/dfl/remote_attestation/starter_docker.sh"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  VM-0:
+    <<: *worker-common
+    build: *worker-build
+    container_name: ${W0_ACCOUNT_ADDRESS}
+    environment:
+      <<: *worker-env
+      ACCOUNT_ADDRESS: ${W0_ACCOUNT_ADDRESS}
+      PRIVATE_KEY: ${W0_PRIVATE_KEY}
+      DEVICE_ID: ${W0_DEVICE_ID}
+      RSA_PRIVATE_KEY: ${W0_RSA_PRIVATE_KEY}
+      RSA_PUBLIC_KEY: ${W0_RSA_PUBLIC_KEY}
+      TRAIN_IMAGES_SRC: /dfl/config/training_data/train-images-0.idx3-ubyte
+      TRAIN_LABELS_SRC: /dfl/config/training_data/train-labels-0.idx1-ubyte
+      RSA_PRIVATE_KEY_FILE: /dfl/keys/private_key.pem
+      RSA_PUBLIC_KEY_FILE: /dfl/keys/public_key.pem
+
+  VM-1:
+    <<: *worker-common
+    container_name: ${W1_ACCOUNT_ADDRESS}
+    environment:
+      <<: *worker-env
+      ACCOUNT_ADDRESS: ${W1_ACCOUNT_ADDRESS}
+      PRIVATE_KEY: ${W1_PRIVATE_KEY}
+      DEVICE_ID: ${W1_DEVICE_ID}
+      RSA_PRIVATE_KEY: ${W1_RSA_PRIVATE_KEY}
+      RSA_PUBLIC_KEY: ${W1_RSA_PUBLIC_KEY}
+      TRAIN_IMAGES_SRC: /dfl/config/training_data/train-images-1.idx3-ubyte
+      TRAIN_LABELS_SRC: /dfl/config/training_data/train-labels-1.idx1-ubyte
+      RSA_PRIVATE_KEY_FILE: /dfl/keys/private_key_1.pem
+      RSA_PUBLIC_KEY_FILE: /dfl/keys/public_key_1.pem
+
+  VM-2:
+    <<: *worker-common
+    container_name: ${W2_ACCOUNT_ADDRESS}
+    environment:
+      <<: *worker-env
+      ACCOUNT_ADDRESS: ${W2_ACCOUNT_ADDRESS}
+      PRIVATE_KEY: ${W2_PRIVATE_KEY}
+      DEVICE_ID: ${W2_DEVICE_ID}
+      RSA_PRIVATE_KEY: ${W2_RSA_PRIVATE_KEY}
+      RSA_PUBLIC_KEY: ${W2_RSA_PUBLIC_KEY}
+      TRAIN_IMAGES_SRC: /dfl/config/training_data/train-images-2.idx3-ubyte
+      TRAIN_LABELS_SRC: /dfl/config/training_data/train-labels-2.idx1-ubyte
+      RSA_PRIVATE_KEY_FILE: /dfl/keys/private_key_2.pem
+      RSA_PUBLIC_KEY_FILE: /dfl/keys/public_key_2.pem

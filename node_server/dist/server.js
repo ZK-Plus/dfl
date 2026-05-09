@@ -2,41 +2,49 @@
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import child_process from 'child_process';
-import util from 'util';
 import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized, getDevicePublicKey, getPreviousAggregatorFromGMStorage, getLastRoundsAggregator } from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
 import fs from 'fs/promises';
 import { DstackClient } from '@phala/dstack-sdk';
 import crypto from 'crypto';
 
-const trainingProcess = util.promisify(child_process.execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const exePath = path.join(__dirname, '../start.exe');
 const deviceID = process.env.DEVICE_ID;
 let currentState = "";
-let aggregatorProc = null;
+let aggregatorServerRunning = false;
+const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
 const rsaPublicKey = process.env.RSA_PUBLIC_KEY.replace(/\\n/g, '\n') || "";
 const rsaPrivateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n') || "";
 
-async function stopAggregatorServer({ softMs = 2000 } = {}) {
-    if (!aggregatorProc) return;
-    return new Promise((resolve) => {
-        let done = false;
-        const onExit = () => {
-            if (done) return;
-            done = true;
-            aggregatorProc = null;
-            resolve();
-        };
-        aggregatorProc.once('exit', onExit);
-        try { aggregatorProc.kill('SIGTERM'); } catch {}
-        setTimeout(() => {
-            if (done) return;
-            try { aggregatorProc.kill('SIGKILL'); } catch {}
-        }, softMs);
-    });
+async function callPythonService(endpoint, payload = {}, { timeoutMs = 0 } = {}) {
+    const controller = timeoutMs > 0 ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    try {
+        const res = await fetch(`${pythonServiceUrl}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller?.signal,
+        });
+        const text = await res.text();
+        let data = {};
+        if (text) {
+            try { data = JSON.parse(text); } catch { data = { raw: text }; }
+        }
+        if (!res.ok || data.ok === false) {
+            throw new Error(`Python service ${endpoint} failed (${res.status}): ${text}`);
+        }
+        return data;
+    } finally {
+        if (timeout) clearTimeout(timeout);
+    }
+}
+
+async function stopAggregatorServer() {
+    if (!aggregatorServerRunning) return;
+    await callPythonService('/server/stop');
+    aggregatorServerRunning = false;
 }
 
 function derHexToBuffer(derHex) {
@@ -107,16 +115,11 @@ const stateMachine = async () => {
                     console.log("Round %d.", Number(await getRound()));
                     console.log("Starting the zerompq server ...");
                     try {
-                        if (!aggregatorProc) {
-                            aggregatorProc = child_process.spawn(
-                                exePath,
-                                ["server", String(process.env.CLIENT_LIMIT)],
-                                { stdio: "inherit" }
-                            );
-                            aggregatorProc.on("exit", (code, signal) => {
-                                console.log(`aggregator server exited: code=${code} signal=${signal}`);
-                                aggregatorProc = null;
+                        if (!aggregatorServerRunning) {
+                            await callPythonService('/server/start', {
+                                client_limit: Number(process.env.CLIENT_LIMIT || 1),
                             });
+                            aggregatorServerRunning = true;
                         }
                         await setCurrentState("AGGREGATING");
                         continue;
@@ -147,14 +150,12 @@ const stateMachine = async () => {
 
                     console.log("Starting local training ...");
                     try {
-                        const { stdout, stderr } = await trainingProcess(exePath, ["train", String(process.env.EPOCH), await getDevicePublicKey(state[1])]);
-                        console.log('stdout:', stdout);
-                        if (stderr) {
-                            console.error('stderr:', stderr);
-                        }
+                        await callPythonService('/train', {
+                            epochs: Number(process.env.EPOCH),
+                            aggregator_public_key_der_hex: await getDevicePublicKey(state[1]),
+                        });
                     } catch (e) {
                         console.error("Error during local training:", e);
-                        await decrementContribution([process.env.ACCOUNT_ADDRESS]);
                         return;
                     }
                     console.log("Local training complete.");
@@ -185,15 +186,13 @@ const stateMachine = async () => {
                     console.log("Is the device authorized? ", await isAuthorized(process.env.ACCOUNT_ADDRESS));
                     console.log("Starting the zerompq client ...");
                     try {
-                        const { stdout, stderr } = await trainingProcess(exePath, ["client", String(state["1"]), String(deviceID)]);
-                        console.log('stdout:', stdout);
-                        if (stderr) {
-                            console.error('stderr:', stderr);
-                        }
+                        await callPythonService('/client', {
+                            server_ip: String(state["1"]),
+                            device_id: String(deviceID),
+                        });
                         await setContribution([process.env.ACCOUNT_ADDRESS]);
                     } catch (e) {
                         console.error("Error during model transfer:", e);
-                        await decrementContribution([process.env.ACCOUNT_ADDRESS]);
                         return;
                     }
                     console.log("Top contributor:", await getTopContributor());
@@ -217,12 +216,12 @@ const stateMachine = async () => {
                     console.log("Starting the aggregation process ...");
                     try {
                         const expected = Number(process.env.CLIENT_LIMIT || 1);
-                        const present = await waitForModels(expected, { dir: srcModelsDir, pollMs: 2000, timeoutMs: 20 * 1000 });
+                        const present = await waitForModels(expected, { dir: srcModelsDir, pollMs: 2000 });
                         console.log(`Models present before aggregation: ${present}/${expected}`);
 
-                        if (aggregatorProc) {
+                        if (aggregatorServerRunning) {
                             console.log("Stopping aggregator server before aggregation...");
-                            await stopAggregatorServer({ softMs: 1500 });
+                            await stopAggregatorServer();
                         }
 
                         const count = await stageAggregation();
@@ -236,16 +235,9 @@ const stateMachine = async () => {
                             console.log(`Aggregating with ${count}/${expected} models.`);
                         }
 
-                        // Wichtig: Timeout und großer Buffer, damit der Prozess nicht hängt
-                        const { stdout, stderr } = await trainingProcess(
-                            exePath,
-                            ["aggregate", String(count)],
-                            { timeout: 3 * 60 * 1000, killSignal: 'SIGKILL', maxBuffer: 16 * 1024 * 1024 }
-                        );
-                        console.log('stdout:', stdout);
-                        if (stderr) {
-                            console.error('stderr:', stderr);
-                        }
+                        await callPythonService('/aggregate', {
+                            num_files: Number(count),
+                        }, { timeoutMs: 3 * 60 * 1000 });
                     } catch (e) {
                         console.error("Error during aggregation:", e);
                         await sleep(2000);
@@ -388,16 +380,12 @@ runService();
 
 process.on('SIGINT', () => {
     console.log('SIGINT received. Exiting.');
-    if (aggregatorProc) {
-        try { aggregatorProc.kill('SIGTERM'); } catch {}
-    }
+    stopAggregatorServer().catch(() => {});
     process.exit(0);
 });
 process.on('SIGTERM', () => {
     console.log('SIGTERM received. Exiting.');
-    if (aggregatorProc) {
-        try { aggregatorProc.kill('SIGTERM'); } catch {}
-    }
+    stopAggregatorServer().catch(() => {});
     process.exit(0);
 });
 
