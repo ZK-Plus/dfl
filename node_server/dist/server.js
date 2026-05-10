@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized, getDevicePublicKey, getPreviousAggregatorFromGMStorage, getLastRoundsAggregator } from "./bc_client.js";
+import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized, getDevicePublicKey, getPreviousAggregatorFromGMStorage, getLastRoundsAggregator, registerDeviceWithTeeQuote } from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
 import fs from 'fs/promises';
 import { DstackClient } from '@phala/dstack-sdk';
@@ -16,6 +16,7 @@ let aggregatorServerRunning = false;
 const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
 const rsaPublicKey = process.env.RSA_PUBLIC_KEY.replace(/\\n/g, '\n') || "";
 const rsaPrivateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n') || "";
+let localTdxRegistrationDone = false;
 
 async function callPythonService(endpoint, payload = {}, { timeoutMs = 0 } = {}) {
     const controller = timeoutMs > 0 ? new AbortController() : null;
@@ -45,6 +46,41 @@ async function stopAggregatorServer() {
     if (!aggregatorServerRunning) return;
     await callPythonService('/server/stop');
     aggregatorServerRunning = false;
+}
+
+function normalizeHexBytes(input) {
+    let hex = Buffer.isBuffer(input) ? input.toString('utf8') : String(input || '');
+    hex = hex.trim();
+    if (hex.startsWith('0x') || hex.startsWith('0X')) hex = hex.slice(2);
+    hex = hex.replace(/\s+/g, '');
+    if (!/^[0-9a-fA-F]*$/.test(hex) || hex.length % 2 !== 0) {
+        throw new Error('TDX quote file must contain hex-encoded bytes');
+    }
+    return `0x${hex}`;
+}
+
+function rsaPublicKeyDerHex() {
+    const key = crypto.createPublicKey(rsaPublicKey);
+    const der = key.export({ format: 'der', type: 'spki' });
+    return `0x${Buffer.from(der).toString('hex')}`;
+}
+
+async function registerWithLocalTdxQuote() {
+    if (localTdxRegistrationDone || process.env.DOCKER === "phala") return;
+    localTdxRegistrationDone = true;
+
+    const quotePath = process.env.TDX_QUOTE_PATH || './attestation/phala_tdx_quote';
+    console.log(`Registering with local TDX quote from ${quotePath} ...`);
+    const quoteHex = normalizeHexBytes(await fs.readFile(quotePath));
+
+    await registerDeviceWithTeeQuote(
+        quoteHex,
+        process.env.ACCOUNT_ADDRESS,
+        process.env.PUBLIC_IP || "",
+        process.env.MSG_BROKER_IP || "",
+        rsaPublicKeyDerHex(),
+    );
+    console.log("Device registered with onchain TDX quote verification.");
 }
 
 function derHexToBuffer(derHex) {
@@ -105,6 +141,9 @@ async function verifyDownloadedGlobalModelSignature({ publicKeyDerHex, modelPath
 }
 
 const stateMachine = async () => {
+    if (process.env.DOCKER !== "phala") {
+        await registerWithLocalTdxQuote();
+    }
     while (Number(await getRound()) < Number(process.env.ROUND)) {
         let state = await getCurrentState();
 

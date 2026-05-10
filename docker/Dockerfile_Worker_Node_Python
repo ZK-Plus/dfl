@@ -43,9 +43,10 @@ COPY neural_network/data/train-labels.idx1-ubyte ./node_server/data/train-labels
 COPY neural_network/data/t10k-images.idx3-ubyte ./node_server/data/t10k-images.idx3-ubyte
 COPY neural_network/data/t10k-labels.idx1-ubyte ./node_server/data/t10k-labels.idx1-ubyte
 COPY neural_network/data/random_start.bin ./node_server/data/random_start.bin
+COPY remote_attestation/apps/data/phala_tdx_quote ./node_server/attestation/
 
 RUN chmod +x /dfl/start_node_python_worker.sh && \
-    mkdir -p /dfl/node_server/data/results_iid /dfl/node_server/received_models
+    mkdir -p /dfl/node_server/data/results_iid /dfl/node_server/received_models /dfl/node_server/attestation
 
 WORKDIR /dfl/node_server
 

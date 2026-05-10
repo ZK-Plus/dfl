@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IRiscZeroVerifier} from "risc0/IRiscZeroVerifier.sol";
-import {ImageID} from "./ImageID.sol"; // auto-generated contract after running `cargo build`.
+interface ITdxV4Attestation {
+    function verifyAndAttestOnChain(bytes calldata input) external view returns (bytes memory output);
+}
 
 contract DeviceRegistry {
-    // @notice RISC Zero verifier contract address.
-    IRiscZeroVerifier public immutable verifier;
-    bytes32 public constant imageId = ImageID.VERIFY_AR_ID;
-
     struct Device {
         bool authorized;
         string public_ip;
@@ -16,13 +13,25 @@ contract DeviceRegistry {
         bytes public_key;
     }
 
+    address public owner;
+    ITdxV4Attestation public tdxV4Attestation;
     mapping(address => Device) public devices;
     uint256 public number;
 
-    constructor(IRiscZeroVerifier _verifier) {
-        verifier = _verifier;
+    constructor() {
+        owner = msg.sender;
         // Add some initial authorized addresses for demonstration
         devices[msg.sender] = Device(true, "test_ip", "", "");
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "not owner");
+        _;
+    }
+
+    function setTdxV4Attestation(address _tdxV4Attestation) public onlyOwner {
+        require(_tdxV4Attestation != address(0), "invalid attestation address");
+        tdxV4Attestation = ITdxV4Attestation(_tdxV4Attestation);
     }
 
     function authorizeAddress(address _address) public {
@@ -52,44 +61,15 @@ contract DeviceRegistry {
         );
     }
 
-    //test function
-    function set(uint256 x, bytes calldata seal) public {
-        // Construct the expected journal data. Verify will fail if journal does not match.
-        bytes memory journal = abi.encode(x);
-        verifier.verify(seal, imageId, sha256(journal));
-        number = x;
-    }
-
     function registerDevice(
-        uint256 x,
-        bytes calldata seal,
+        bytes calldata quote,
         address _address,
         string memory _public_ip,
         string memory _msg_broker_ip,
         bytes memory _public_key
     ) public {
-        // construct the journal data and add the device to the registry
-        bytes memory journal = abi.encode(x);
-        verifier.verify(seal, imageId, sha256(journal));
-        devices[_address] = Device(
-            true,
-            _public_ip,
-            _msg_broker_ip,
-            _public_key
-        );
-    }
-
-    function runProof(bytes calldata seal, uint256 x) public {
-        bytes memory journal = abi.encode(x);
-        verifier.verify(seal, imageId, sha256(journal));
-    }
-
-    function registerDeviceWithoutProof(
-        address _address,
-        string memory _public_ip,
-        string memory _msg_broker_ip,
-        bytes memory _public_key
-    ) public {
+        require(address(tdxV4Attestation) != address(0), "tdx attestation not configured");
+        tdxV4Attestation.verifyAndAttestOnChain(quote);
         devices[_address] = Device(
             true,
             _public_ip,

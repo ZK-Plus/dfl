@@ -64,8 +64,6 @@ export AGGREGATOR_SELECTION_ADDRESS=$(jq -re '.transactions[] | select(.contract
 
 export GMSTORAGE=$(jq -re '.transactions[] | select(.contractName == "GMStorage") | .contractAddress' ./broadcast/Deploy.s.sol/$CHAIN_ID/run-latest.json)
 
-export RISC0_VERIFIER=$(jq -re '.transactions[] | select(.contractName == "RiscZeroGroth16Verifier") | .contractAddress' ./broadcast/Deploy.s.sol/$CHAIN_ID/run-latest.json)
-
 ENABLE_DCAP=${ENABLE_DCAP:-1}
 if [ "$ENABLE_DCAP" = "1" ]; then
     echo "Deploying Automata DCAP v4 contracts"
@@ -157,35 +155,23 @@ if [ "$ENABLE_DCAP" = "1" ]; then
 
     popd >/dev/null
 
-    DCAP_ROOT="$SCRIPT_DIR/lib/automata-dcap-v3-attestation"
-    pushd "$DCAP_ROOT" >/dev/null || {
-        echo "Failed to enter DCAP root: $DCAP_ROOT"
-        exit 1
-    }
-
-    export ENCLAVE_IDENTITY_HELPER
-    export FMSPC_TCB_HELPER
-    export X509_HELPER
-    export X509_CRL_HELPER
-    export ENCLAVE_ID_DAO
-    export FMSPC_TCB_DAO
-    export PCK_DAO
-    export PCS_DAO
-    export RISC0_VERIFIER
-
-	    forge script forge-script/v3/DeployDCAPScript.s.sol --broadcast --rpc-url $rpc_url
-	    export DCAP_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "AutomataDcapV3Attestation") | .contractAddress' ./broadcast/DeployDCAPScript.s.sol/$CHAIN_ID/run-latest.json)
-	    echo "AutomataDcapV3Attestation: $DCAP_ADDRESS"
-        authorize_pccs_reader "$DCAP_ADDRESS"
-
-	    popd >/dev/null
-
 	    DEPLOY_TDX_V4_DCAP=${DEPLOY_TDX_V4_DCAP:-1}
 	    if [ "$DEPLOY_TDX_V4_DCAP" = "1" ]; then
-	        forge script script/DeployTDXV4Attestation.s.sol --broadcast --rpc-url $rpc_url
-	        export DCAP_TDX_V4_ADDRESS=$(jq -re '.transactions[] | select(.contractName == "AutomataDcapTdxV4Attestation") | .contractAddress' ./broadcast/DeployTDXV4Attestation.s.sol/$CHAIN_ID/run-latest.json)
+	        TDX_CREATE_JSON=$(forge create contracts/AutomataDcapTdxV4Attestation.sol:AutomataDcapTdxV4Attestation \
+	            --force --no-cache --broadcast --rpc-url $rpc_url --private-key $ETH_WALLET_PRIVATE_KEY --json \
+	            --constructor-args \
+	            "$ENCLAVE_ID_DAO" \
+	            "$X509_HELPER" \
+	            "$FMSPC_TCB_DAO" \
+	            "$X509_CRL_HELPER" \
+	            "$PCS_DAO" \
+	            "$P256_VERIFIER_ADDRESS")
+	        echo "$TDX_CREATE_JSON"
+	        export DCAP_TDX_V4_ADDRESS=$(printf '%s' "$TDX_CREATE_JSON" | jq -re '.deployedTo // .deployed_to')
 	        echo "AutomataDcapTdxV4Attestation: $DCAP_TDX_V4_ADDRESS"
             authorize_pccs_reader "$DCAP_TDX_V4_ADDRESS"
+            cast send --rpc-url $rpc_url --private-key $ETH_WALLET_PRIVATE_KEY \
+                $DEVICE_REGISTRY_ADDRESS "setTdxV4Attestation(address)" $DCAP_TDX_V4_ADDRESS
 	    fi
 
 	    UPLOAD_PCCS_COLLATERALS=${UPLOAD_PCCS_COLLATERALS:-1}
@@ -405,14 +391,16 @@ PY
 	        fi
 	        echo "PCCS Collaterals uploaded successfully"
 
-	        VERIFY_TDX_QUOTE_ONCHAIN=${VERIFY_TDX_QUOTE_ONCHAIN:-0}
-	        if [ "$VERIFY_TDX_QUOTE_ONCHAIN" = "1" ] && [ -n "${DCAP_TDX_V4_ADDRESS:-}" ]; then
-	            export QUOTE_PATH="$PCCS_QUOTE_PATH"
-	            if ! forge script script/VerifyTDXV4Quote.s.sol --rpc-url $rpc_url; then
-	                echo "TDX V4 quote verification failed"
-	                exit 1
-	            fi
-	        fi
+	        # Hardcoded startup quote verification is disabled here on purpose.
+	        # Runtime TEE quotes should be supplied and verified by the worker flow.
+	        # VERIFY_TDX_QUOTE_ONCHAIN=${VERIFY_TDX_QUOTE_ONCHAIN:-0}
+	        # if [ "$VERIFY_TDX_QUOTE_ONCHAIN" = "1" ] && [ -n "${DCAP_TDX_V4_ADDRESS:-}" ]; then
+	        #     export QUOTE_PATH="$PCCS_QUOTE_PATH"
+	        #     if ! forge script script/VerifyTDXV4Quote.s.sol --rpc-url $rpc_url; then
+	        #         echo "TDX V4 quote verification failed"
+	        #         exit 1
+	        #     fi
+	        # fi
 	    fi
 fi
 
@@ -508,7 +496,7 @@ echo "PRIVATE_KEY= $PRIVATE_KEY_0"
 
 echo "SEPOLIA_RPC_URL= $rpc_url"
 
-echo "AUTOMATA_DCAP_V3_ ATTESTATION_URL= $DCAP_ADDRESS"
+echo "AUTOMATA_DCAP_V3_ ATTESTATION_URL= ${DCAP_ADDRESS:-}"
 
 echo "AUTOMATA_DCAP_TDX_V4_ATTESTATION_URL= ${DCAP_TDX_V4_ADDRESS:-}"
 
@@ -561,14 +549,6 @@ echo "Authorization Status:"
 # [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_18)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_18: yes || echo $ADDRESS_18: no
 # [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_19)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_19: yes || echo $ADDRESS_19: no
 
-
-
-echo "Registering device without proof"
-echo "RSA_PUBLIC_KEY: $rsa_public_key"
-cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "registerDeviceWithoutProof(address,string,string,bytes)" $ADDRESS_0 "" "" $rsa_public_key
-cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "registerDeviceWithoutProof(address,string,string,bytes)" $ADDRESS_1 "" "" $rsa_public_key_1
-cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "registerDeviceWithoutProof(address,string,string,bytes)" $ADDRESS_2 "" "" $rsa_public_key_2
-
 #echo "Authorized Workers 0 to 19"
 #cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "authorizeAddress(address)" $ADDRESS_0
 #cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "authorizeAddress(address)" $ADDRESS_1
@@ -592,9 +572,9 @@ cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRE
 # cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $DEVICE_REGISTRY_ADDRESS "authorizeAddress(address)" $ADDRESS_19
 
 echo "Authorization Status:"
-[ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_0)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_0: yes || echo $ADDRESS_0: no
-[ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_1)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_1: yes || echo $ADDRESS_1: no
-[ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_2)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_2: yes || echo $ADDRESS_2: no
+#[ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_0)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_0: yes || echo $ADDRESS_0: no
+#[ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_1)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_1: yes || echo $ADDRESS_1: no
+#[ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_2)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_2: yes || echo $ADDRESS_2: no
 # [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_3)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_3: yes || echo $ADDRESS_3: no
 # [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_4)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_4: yes || echo $ADDRESS_4: no
 # [ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_5)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_5: yes || echo $ADDRESS_5: no

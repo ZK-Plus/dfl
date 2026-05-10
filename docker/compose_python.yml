@@ -20,6 +20,7 @@ x-worker-env: &worker-env
   EPOCH: ${EPOCH}
   ROUND: ${ROUND}
   PYTHON_SERVICE_URL: http://127.0.0.1:8000
+  TDX_QUOTE_PATH: ${TDX_QUOTE_PATH:-./attestation/phala_tdx_quote}
 
 x-worker-common: &worker-common
   image: sonak53/dfl-node-python-worker:latest_local

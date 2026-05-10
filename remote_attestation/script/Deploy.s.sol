@@ -18,11 +18,6 @@ pragma solidity ^0.8.20;
 
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
-import {IRiscZeroVerifier} from "risc0/IRiscZeroVerifier.sol";
-import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
-import {ControlID} from "risc0/groth16/ControlID.sol";
-
-import {EvenNumber} from "../contracts/EvenNumber.sol";
 import {DeviceRegistry} from "../contracts/DeviceRegistry.sol";
 import {AggregatorSelection} from "../contracts/AggregatorSelection.sol";
 import {GMStorage} from "smart_contract/GMStorage.sol";
@@ -40,13 +35,7 @@ contract DeviceRegistryDeploy is Script {
 
         vm.startBroadcast(deployerKey);
 
-        IRiscZeroVerifier verifier = new RiscZeroGroth16Verifier(
-            ControlID.CONTROL_ROOT,
-            ControlID.BN254_CONTROL_ID
-        );
-        console2.log("Deployed RiscZeroGroth16Verifier to", address(verifier));
-
-        DeviceRegistry deviceRegistry = new DeviceRegistry(verifier);
+        DeviceRegistry deviceRegistry = new DeviceRegistry();
         console2.log("Deployed DeviceRegistry to", address(deviceRegistry));
 
         AggregatorSelection aggregatorSelection = new AggregatorSelection(

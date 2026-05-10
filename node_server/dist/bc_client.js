@@ -371,3 +371,32 @@ export const getDevicePublicKey = async (address) => {
     return publicKey;
 };
 
+export const registerDeviceWithTeeQuote = async (quoteHex, address, publicIp, brokerIp, publicKeyBytesHex) => {
+    const abi = JSON.parse(fs.readFileSync("./abi/registry.json", "utf-8"));
+    const contract = new web3.eth.Contract(abi, device_registry_address);
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await contract.methods
+        .registerDevice(quoteHex, address, publicIp, brokerIp, publicKeyBytesHex)
+        .estimateGas({ from: account.address });
+    const tx = {
+        from: account.address,
+        to: device_registry_address,
+        gas: gasEstimate,
+        gasPrice: gasPrice,
+        data: contract.methods
+            .registerDevice(quoteHex, address, publicIp, brokerIp, publicKeyBytesHex)
+            .encodeABI(),
+    };
+    try {
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+        console.log("Transaction receipt: ", receipt);
+        return receipt;
+    }
+    catch (error) {
+        console.error("Error sending transaction: ", error);
+        throw error;
+    }
+};
