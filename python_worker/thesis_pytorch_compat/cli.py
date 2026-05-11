@@ -394,10 +394,14 @@ def start_client(server_ip: str, device_id: str) -> None:
     print(f"Server: {sock.recv_string()}")
 
 
-def aggregate(num_files: int) -> None:
-    models: List[FederatedMLP] = []
-    for i in range(num_files):
-        models.append(read_model_bin(results_dir() / f"wb_client_{i}.bin"))
+def aggregate(num_files: int | None = None) -> None:
+    model_paths = sorted(received_models_dir().glob("*.bin"), key=lambda p: p.name)
+    if num_files is not None and len(model_paths) != num_files:
+        print(f"Aggregating {len(model_paths)} received model file(s), expected {num_files}.")
+    else:
+        print(f"Aggregating {len(model_paths)} received model file(s).")
+
+    models: List[FederatedMLP] = [read_model_bin(path) for path in model_paths]
     if not models:
         raise ValueError("aggregate requires at least one model")
     avg_model = FederatedMLP().double()

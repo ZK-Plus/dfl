@@ -49,7 +49,7 @@
         <mxCell id="aggCheck" value="AGGREGATING&#xa;am I aggregator?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
           <mxGeometry x="340" y="520" width="150" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="aggFlow" value="Aggregation flow&#xa;- waitForModels(CLIENT_LIMIT)&#xa;- stop aggregator server&#xa;- stageAggregation()&#xa;- if count == 0: sleep + continue&#xa;- run `start.exe aggregate count`&#xa;- setCurrentState(&quot;UPDATING&quot;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+        <mxCell id="aggFlow" value="Aggregation flow&#xa;- waitForModels(CLIENT_LIMIT)&#xa;- stop aggregator server&#xa;- stageAggregation()&#xa;- if count == 0: sleep + continue&#xa;- Python aggregates received `.bin` files&#xa;- setCurrentState(&quot;UPDATING&quot;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
           <mxGeometry x="560" y="560" width="260" height="140" as="geometry" />
         </mxCell>
         <mxCell id="updatingCheck" value="UPDATING&#xa;am I aggregator?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
@@ -67,7 +67,7 @@
         <mxCell id="helperSig" value="Helper: verifyDownloadedGlobalModelSignature()&#xa;1. DER hex -&gt; buffer&#xa;2. read gm.bin and gm.bin.sig&#xa;3. parse SPKI public key&#xa;4. crypto.verify(RSA-SHA256)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;dashed=1;" vertex="1" parent="1">
           <mxGeometry x="1030" y="170" width="260" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="helperStage" value="Helper: stageAggregation()&#xa;1. ensure `data/results_iid` exists&#xa;2. delete old `.bin` files there&#xa;3. read `received_models`&#xa;4. sort `.bin` files&#xa;5. copy as `wb_client_0.bin`, ..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+        <mxCell id="helperStage" value="Helper: stageAggregation()&#xa;1. ensure `data/results_iid` exists&#xa;2. delete old `.bin` files there&#xa;3. read `received_models`&#xa;4. count/log received `.bin` files&#xa;5. no renaming before aggregation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
           <mxGeometry x="880" y="720" width="280" height="120" as="geometry" />
         </mxCell>
         <mxCell id="helperClean" value="Helper: stageCleaning()&#xa;delete files in&#xa;- `received_models`&#xa;- `data/results_iid`" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;" vertex="1" parent="1">

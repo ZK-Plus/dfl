@@ -45,6 +45,7 @@ services:
     entrypoint:
       - anvil
     command:
+      - --quiet
       - --accounts
       - "20"
       - --hardfork
@@ -59,12 +60,16 @@ services:
     image: ipfs/kubo:latest
     container_name: ipfs_local
     restart: unless-stopped
+    environment:
+      IPFS_TELEMETRY: "off"
     ports:
       - "127.0.0.1:4001:4001"
       - "127.0.0.1:5001:5001"
       - "127.0.0.1:8080:8080"
     tmpfs:
       - /data/ipfs
+    volumes:
+      - ./ipfs-disable-version-check.sh:/container-init.d/001-disable-version-check.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "ipfs id >/dev/null 2>&1 || exit 1"]
       interval: 2s

@@ -350,15 +350,9 @@ async function stageAggregation() {
         return 0;
     }
 
-    console.log("Copied files (with rename):");
-    let idx = 0;
+    console.log("Received model files:");
     for (const name of binFiles) {
-        const src = path.join(srcModelsDir, name);
-        const destName = `wb_client_${idx}.bin`;
-        const dest = path.join(resultsIIDDir, destName);
-        await fs.copyFile(src, dest);
-        console.log(" - %s -> %s", src, dest);
-        idx++;
+        console.log(" - %s", path.join(srcModelsDir, name));
     }
 
     return binFiles.length;
