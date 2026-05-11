@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 interface IDeviceRegistry {
     function isAuthorized(address _address) external view returns (bool);
+    function getAuthorizedDevices() external view returns (address[] memory);
 }
 
 interface IAggregatorSelection {
@@ -19,7 +20,29 @@ contract GMStorage {
     address public device_registry_address;
     address public aggregator_selection_address;
     mapping(address => uint256) public contributions;
+    mapping(uint256 => mapping(address => bool)) public modelSubmitted;
+    mapping(uint256 => mapping(address => bytes32)) public modelSubmissionHash;
+    mapping(uint256 => mapping(address => mapping(bytes32 => bool)))
+        public penaltyApplied;
     address[] private contributors;
+
+    event ModelSubmitted(
+        uint256 indexed round,
+        address indexed device,
+        bytes32 modelHash
+    );
+    event ContributionIncremented(
+        uint256 indexed round,
+        address indexed device,
+        uint256 score
+    );
+    event ContributionDecremented(
+        uint256 indexed round,
+        address indexed device,
+        uint256 score,
+        string reason
+    );
+    event RoundAborted(uint256 indexed round, address indexed failedAggregator);
 
     constructor(
         address _device_registry_address,
@@ -86,19 +109,75 @@ contract GMStorage {
 
     function incrementContribution(address[] memory _addresses) external {
         for (uint256 i = 0; i < _addresses.length; i++) {
-            if (
-                contributions[_addresses[i]] == 0 &&
-                !isContributor(_addresses[i])
-            ) {
-                contributors.push(_addresses[i]);
-            }
+            addContributor(_addresses[i]);
             contributions[_addresses[i]]++;
+            emit ContributionIncremented(
+                round,
+                _addresses[i],
+                contributions[_addresses[i]]
+            );
         }
     }
 
-    function decrementContribution(address[] memory _addresses) external {
+    function penalizeContribution(
+        address[] memory _addresses,
+        string memory reason
+    ) external {
+        require(
+            msg.sender == aggregator_selection_address ||
+                IAggregatorSelection(aggregator_selection_address).isAggregator(
+                    msg.sender
+                ),
+            "Caller cannot penalize"
+        );
+        _penalizeContribution(_addresses, reason);
+    }
+
+    function submitModel(bytes32 modelHash) external {
+        require(
+            IDeviceRegistry(device_registry_address).isAuthorized(msg.sender),
+            "Device is not authorized"
+        );
+        addContributor(msg.sender);
+        modelSubmitted[round][msg.sender] = true;
+        modelSubmissionHash[round][msg.sender] = modelHash;
+        emit ModelSubmitted(round, msg.sender, modelHash);
+    }
+
+    function hasSubmittedModel(
+        uint256 _round,
+        address _address
+    ) external view returns (bool) {
+        return modelSubmitted[_round][_address];
+    }
+
+    function _penalizeContribution(
+        address[] memory _addresses,
+        string memory reason
+    ) internal {
+        bytes32 reasonHash = keccak256(bytes(reason));
         for (uint256 i = 0; i < _addresses.length; i++) {
-            contributions[_addresses[i]]--;
+            address device = _addresses[i];
+            if (penaltyApplied[round][device][reasonHash]) {
+                continue;
+            }
+            penaltyApplied[round][device][reasonHash] = true;
+            addContributor(device);
+            if (contributions[device] > 0) {
+                contributions[device]--;
+            }
+            emit ContributionDecremented(
+                round,
+                device,
+                contributions[device],
+                reason
+            );
+        }
+    }
+
+    function addContributor(address _address) internal {
+        if (!isContributor(_address)) {
+            contributors.push(_address);
         }
     }
 
@@ -120,6 +199,16 @@ contract GMStorage {
         );
         round++;
         lastRoundAggregator = msg.sender;
+    }
+
+    function abortRound(address failedAggregator) external {
+        require(
+            msg.sender == aggregator_selection_address,
+            "Caller is not aggregator selection"
+        );
+        emit RoundAborted(round, failedAggregator);
+        round++;
+        lastRoundAggregator = failedAggregator;
     }
 
     function setLastRoundAggregator() external {
@@ -174,5 +263,55 @@ contract GMStorage {
             }
         }
         return topContributor;
+    }
+
+    function getWeightedRandomContributor(
+        uint256 randomness
+    ) external view returns (address) {
+        return selectWeightedRandomContributor(randomness, address(0), false);
+    }
+
+    function getWeightedRandomContributorExcluding(
+        uint256 randomness,
+        address excluded
+    ) external view returns (address) {
+        return selectWeightedRandomContributor(randomness, excluded, true);
+    }
+
+    function selectWeightedRandomContributor(
+        uint256 randomness,
+        address excluded,
+        bool useExclusion
+    ) internal view returns (address) {
+        address[] memory authorizedDevices = IDeviceRegistry(
+            device_registry_address
+        ).getAuthorizedDevices();
+        uint256 totalWeight = 0;
+
+        for (uint256 i = 0; i < authorizedDevices.length; i++) {
+            if (useExclusion && authorizedDevices[i] == excluded) {
+                continue;
+            }
+            totalWeight += contributions[authorizedDevices[i]] + 1;
+        }
+
+        if (totalWeight == 0) {
+            return address(0);
+        }
+
+        uint256 selectedWeight = randomness % totalWeight;
+        uint256 cursor = 0;
+
+        for (uint256 i = 0; i < authorizedDevices.length; i++) {
+            if (useExclusion && authorizedDevices[i] == excluded) {
+                continue;
+            }
+            cursor += contributions[authorizedDevices[i]] + 1;
+            if (selectedWeight < cursor) {
+                return authorizedDevices[i];
+            }
+        }
+
+        return address(0);
     }
 }

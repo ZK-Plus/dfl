@@ -1,1 +1,625 @@
-[{"inputs":[{"internalType":"address","name":"_device_registry_address","type":"address"},{"internalType":"address","name":"_aggregator_selection_address","type":"address"},{"internalType":"string","name":"_initial_GM_CID","type":"string"},{"internalType":"string","name":"_initial_GM_SIG_CID","type":"string"},{"internalType":"address","name":"_initial_GM_SIGNER_ADDRESS","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"stateMutability":"view","type":"function","name":"aggregator_selection_address","outputs":[{"internalType":"address","name":"","type":"address"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"backupGlobalModel","outputs":[{"internalType":"string","name":"","type":"string"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"backupGlobalModelSignature","outputs":[{"internalType":"string","name":"","type":"string"}]},{"inputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function","name":"contributions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}]},{"inputs":[{"internalType":"address[]","name":"_addresses","type":"address[]"}],"stateMutability":"nonpayable","type":"function","name":"decrementContribution"},{"inputs":[],"stateMutability":"view","type":"function","name":"device_registry_address","outputs":[{"internalType":"address","name":"","type":"address"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"getBackupGlobalModel","outputs":[{"internalType":"string","name":"","type":"string"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"getBackupGlobalModelSignature","outputs":[{"internalType":"string","name":"","type":"string"}]},{"inputs":[{"internalType":"address","name":"_address","type":"address"}],"stateMutability":"view","type":"function","name":"getContribution","outputs":[{"internalType":"uint256","name":"","type":"uint256"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"getGlobalModel","outputs":[{"internalType":"string","name":"","type":"string"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"getGlobalModelSignature","outputs":[{"internalType":"string","name":"","type":"string"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"getLastRoundsAggregator","outputs":[{"internalType":"address","name":"","type":"address"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"getRound","outputs":[{"internalType":"uint256","name":"","type":"uint256"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"getTopContributor","outputs":[{"internalType":"address","name":"","type":"address"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"globalModel","outputs":[{"internalType":"string","name":"","type":"string"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"globalModelSignature","outputs":[{"internalType":"string","name":"","type":"string"}]},{"inputs":[{"internalType":"address[]","name":"_addresses","type":"address[]"}],"stateMutability":"nonpayable","type":"function","name":"incrementContribution"},{"inputs":[],"stateMutability":"nonpayable","type":"function","name":"incrementRound"},{"inputs":[],"stateMutability":"view","type":"function","name":"lastRoundAggregator","outputs":[{"internalType":"address","name":"","type":"address"}]},{"inputs":[],"stateMutability":"view","type":"function","name":"round","outputs":[{"internalType":"uint256","name":"","type":"uint256"}]},{"inputs":[{"internalType":"string","name":"_newGlobalModel","type":"string"}],"stateMutability":"nonpayable","type":"function","name":"setGlobalModel"},{"inputs":[{"internalType":"string","name":"_newGlobalModel","type":"string"},{"internalType":"string","name":"_newGlobalModelSignature","type":"string"}],"stateMutability":"nonpayable","type":"function","name":"setGlobalModelAndSignature"},{"inputs":[{"internalType":"string","name":"_newGlobalModelSignature","type":"string"}],"stateMutability":"nonpayable","type":"function","name":"setGlobalModelSignature"},{"inputs":[],"stateMutability":"nonpayable","type":"function","name":"setLastRoundAggregator"}]
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "_device_registry_address",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_aggregator_selection_address",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_initial_GM_CID",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_initial_GM_SIG_CID",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_initial_GM_SIGNER_ADDRESS",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "abortRound",
+    "inputs": [
+      {
+        "name": "failedAggregator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "aggregator_selection_address",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "backupGlobalModel",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "backupGlobalModelSignature",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "contributions",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "device_registry_address",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getBackupGlobalModel",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getBackupGlobalModelSignature",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getContribution",
+    "inputs": [
+      {
+        "name": "_address",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getGlobalModel",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getGlobalModelSignature",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getLastRoundsAggregator",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getRound",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getTopContributor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getWeightedRandomContributor",
+    "inputs": [
+      {
+        "name": "randomness",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getWeightedRandomContributorExcluding",
+    "inputs": [
+      {
+        "name": "randomness",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "excluded",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "globalModel",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "globalModelSignature",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hasSubmittedModel",
+    "inputs": [
+      {
+        "name": "_round",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_address",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "incrementContribution",
+    "inputs": [
+      {
+        "name": "_addresses",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "incrementRound",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "lastRoundAggregator",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "modelSubmissionHash",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "modelSubmitted",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "penalizeContribution",
+    "inputs": [
+      {
+        "name": "_addresses",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "reason",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "penaltyApplied",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "round",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setGlobalModel",
+    "inputs": [
+      {
+        "name": "_newGlobalModel",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setGlobalModelAndSignature",
+    "inputs": [
+      {
+        "name": "_newGlobalModel",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_newGlobalModelSignature",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setGlobalModelSignature",
+    "inputs": [
+      {
+        "name": "_newGlobalModelSignature",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setLastRoundAggregator",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitModel",
+    "inputs": [
+      {
+        "name": "modelHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "ContributionDecremented",
+    "inputs": [
+      {
+        "name": "round",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "device",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "score",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reason",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContributionIncremented",
+    "inputs": [
+      {
+        "name": "round",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "device",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "score",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ModelSubmitted",
+    "inputs": [
+      {
+        "name": "round",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "device",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "modelHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoundAborted",
+    "inputs": [
+      {
+        "name": "round",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "failedAggregator",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  }
+]

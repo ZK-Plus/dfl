@@ -2,8 +2,9 @@
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, getRound, incrementRound, isAuthorized, getDevicePublicKey, getPreviousAggregatorFromGMStorage, getLastRoundsAggregator, registerDeviceWithTeeQuote } from "./bc_client.js";
+import { getCurrentGM, setGlobalModel, getCurrentState, getAggregatorEndpoint, setAggregatorEndpoint, setCurrentState, setContribution, getTopContributor, triggerAggregatorSelection, reportAggregatorTimeout, getRound, incrementRound, isAuthorized, getAuthorizedDevices, getDevicePublicKey, getPreviousAggregatorFromGMStorage, getLastRoundsAggregator, registerDeviceWithTeeQuote, submitModel, penalizeContribution } from "./bc_client.js";
 import { getCurrentModel, pinFile, getFileFromIPFS, updateGM } from "./ipfs.js";
+import { deriveTimingConfig, validateTimingConfig } from "./state_timing.js";
 import fs from 'fs/promises';
 import { DstackClient } from '@phala/dstack-sdk';
 import crypto from 'crypto';
@@ -17,6 +18,14 @@ const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:800
 const rsaPublicKey = process.env.RSA_PUBLIC_KEY.replace(/\\n/g, '\n') || "";
 const rsaPrivateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n') || "";
 let localTdxRegistrationDone = false;
+const timingConfig = deriveTimingConfig(process.env);
+const modelSubmissionDeadlineMs = timingConfig.modelSubmissionDeadlineMs;
+const gmUpdateTimeoutMs = timingConfig.gmUpdateTimeoutMs;
+const gmUpdateTimeoutLoops = timingConfig.gmUpdateTimeoutLoops;
+for (const warning of validateTimingConfig(timingConfig)) {
+    console.warn("Timing config warning:", warning);
+}
+let missedGMUpdateLoops = 0;
 
 async function callPythonService(endpoint, payload = {}, { timeoutMs = 0 } = {}) {
     const controller = timeoutMs > 0 ? new AbortController() : null;
@@ -63,6 +72,80 @@ function rsaPublicKeyDerHex() {
     const key = crypto.createPublicKey(rsaPublicKey);
     const der = key.export({ format: 'der', type: 'spki' });
     return `0x${Buffer.from(der).toString('hex')}`;
+}
+
+async function localModelPackageHash() {
+    const data = await fs.readFile('./data/lm.bin.enc');
+    return `0x${crypto.createHash('sha256').update(data).digest('hex')}`;
+}
+
+async function expectedWorkerAddresses() {
+    const own = String(process.env.ACCOUNT_ADDRESS || '').toLowerCase();
+    const authorizedDevices = await getAuthorizedDevices();
+    return authorizedDevices
+        .filter(address => address.toLowerCase() !== own);
+}
+
+async function receivedWorkerModelFiles() {
+    const expected = new Set((await expectedWorkerAddresses()).map(address => address.toLowerCase()));
+    const entries = await fs.readdir(srcModelsDir, { withFileTypes: true }).catch(err => {
+        if (err && err.code === 'ENOENT') return [];
+        throw err;
+    });
+    const files = [];
+    for (const entry of entries) {
+        if (!entry.isFile() || !entry.name.endsWith('.bin')) continue;
+        const filePath = path.join(srcModelsDir, entry.name);
+        const match = entry.name.match(/^wb_client_(.+)\.bin$/);
+        if (!match) {
+            files.push({ name: entry.name, path: filePath, authorized: false, reason: "unknown filename" });
+            continue;
+        }
+        const address = match[1];
+        if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+            files.push({ name: entry.name, path: filePath, authorized: false, reason: "filename does not contain a device address" });
+            continue;
+        }
+        if (!expected.has(address.toLowerCase())) {
+            files.push({ name: entry.name, path: filePath, address, authorized: false, reason: "not expected this round" });
+            continue;
+        }
+        const authorized = await isAuthorized(address);
+        files.push({
+            name: entry.name,
+            path: filePath,
+            address,
+            authorized,
+            reason: authorized ? "" : "not TEE authorized",
+        });
+    }
+    return files.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function receivedWorkerAddresses() {
+    const files = await receivedWorkerModelFiles();
+    return new Set(
+        files
+            .filter(file => file.authorized && file.address)
+            .map(file => file.address.toLowerCase())
+    );
+}
+
+async function getMissingAuthorizedWorkers() {
+    const expected = await expectedWorkerAddresses();
+    if (expected.length === 0) {
+        console.warn("No onchain authorized workers found; skipping missed-deadline penalties.");
+        return [];
+    }
+    const received = await receivedWorkerAddresses();
+    const missing = [];
+    for (const address of expected) {
+        if (received.has(address.toLowerCase())) continue;
+        if (await isAuthorized(address)) {
+            missing.push(address);
+        }
+    }
+    return missing;
 }
 
 async function registerWithLocalTdxQuote() {
@@ -160,6 +243,13 @@ const stateMachine = async () => {
                             });
                             aggregatorServerRunning = true;
                         }
+                        const expected = Number(process.env.CLIENT_LIMIT || 1);
+                        console.log(`Waiting for local model submissions before aggregation (${expected} expected).`);
+                        await waitForModels(expected, {
+                            dir: srcModelsDir,
+                            pollMs: 2000,
+                            timeoutMs: modelSubmissionDeadlineMs,
+                        });
                         await setCurrentState("AGGREGATING");
                         continue;
                     } catch (e) {
@@ -227,8 +317,9 @@ const stateMachine = async () => {
                     try {
                         await callPythonService('/client', {
                             server_ip: String(state["1"]),
-                            device_id: String(deviceID),
+                            device_id: String(process.env.ACCOUNT_ADDRESS),
                         });
+                        await submitModel(await localModelPackageHash());
                         await setContribution([process.env.ACCOUNT_ADDRESS]);
                     } catch (e) {
                         console.error("Error during model transfer:", e);
@@ -239,10 +330,21 @@ const stateMachine = async () => {
                     console.log("Rounds left: ", (Number(process.env.ROUND) - Number(await getRound())));
                     console.log("Waiting till next round.");
                     try {
-                        const newGM = await waitForGMUpdate(prevGM, { pollMs: 5000, timeoutMs: 30 * 1000 });
+                        const newGM = await waitForGMUpdate(prevGM, { pollMs: 5000, timeoutMs: gmUpdateTimeoutMs });
+                        missedGMUpdateLoops = 0;
                         console.log("New Global Model detected:", newGM);
                     } catch (e) {
-                        console.warn("No new GM within timeout. Continuing loop.");
+                        missedGMUpdateLoops++;
+                        console.warn(`No new GM within timeout. Missed update loop ${missedGMUpdateLoops}/${gmUpdateTimeoutLoops}.`);
+                        if (missedGMUpdateLoops >= gmUpdateTimeoutLoops) {
+                            console.warn("Reporting aggregator timeout onchain.");
+                            try {
+                                await reportAggregatorTimeout();
+                            } catch (reportError) {
+                                console.error("Error reporting aggregator timeout:", reportError);
+                            }
+                            missedGMUpdateLoops = 0;
+                        }
                     }
                     await sleep(2000);
                     continue;
@@ -255,7 +357,11 @@ const stateMachine = async () => {
                     console.log("Starting the aggregation process ...");
                     try {
                         const expected = Number(process.env.CLIENT_LIMIT || 1);
-                        const present = await waitForModels(expected, { dir: srcModelsDir, pollMs: 2000 });
+                        const present = await waitForModels(expected, {
+                            dir: srcModelsDir,
+                            pollMs: 2000,
+                            timeoutMs: 1,
+                        });
                         console.log(`Models present before aggregation: ${present}/${expected}`);
 
                         if (aggregatorServerRunning) {
@@ -265,6 +371,11 @@ const stateMachine = async () => {
 
                         const count = await stageAggregation();
                         console.log(`Staged ${count} model file(s) for aggregation.`);
+                        const missingWorkers = await getMissingAuthorizedWorkers();
+                        if (missingWorkers.length > 0) {
+                            console.log("Penalizing missing model submissions:", missingWorkers);
+                            await penalizeContribution(missingWorkers, "missed_model_deadline");
+                        }
                         if (count <= 0) {
                             console.log("No models to aggregate (count=0). Waiting for next loop.");
                             await sleep(2000);
@@ -307,8 +418,13 @@ const stateMachine = async () => {
                     console.log("Rounds left: ", (Number(process.env.ROUND) - Number(await getRound())));
                     await setCurrentState("TRAINING");
                     console.log("Set state to TRAINING for next round");
-                    await triggerAggregatorSelection();
-                    console.log("Triggered new aggregator selection");
+                    try {
+                        await triggerAggregatorSelection();
+                        console.log("Triggered new aggregator selection");
+                    } catch (e) {
+                        console.error("Aggregator selection failed; keeping current aggregator alive for retry:", e);
+                        await sleep(2000);
+                    }
 
                     continue;
                 }
@@ -338,24 +454,26 @@ async function stageAggregation() {
         );
     } catch {}
 
-    // Quelle lesen und .bin-Dateien sortiert verarbeiten
-    const entries = await fs.readdir(srcModelsDir, { withFileTypes: true });
-    const binFiles = entries
-        .filter(e => e.isFile() && e.name.endsWith('.bin'))
-        .map(e => e.name)
-        .sort((a, b) => a.localeCompare(b));
+    const modelFiles = await receivedWorkerModelFiles();
+    const acceptedFiles = modelFiles.filter(file => file.authorized);
+    const rejectedFiles = modelFiles.filter(file => !file.authorized);
 
-    if (binFiles.length === 0) {
+    for (const file of rejectedFiles) {
+        console.warn("Ignoring received model %s (%s)", file.path, file.reason);
+        await fs.unlink(file.path).catch(() => {});
+    }
+
+    if (acceptedFiles.length === 0) {
         console.log("No .bin files found in %s", srcModelsDir);
         return 0;
     }
 
-    console.log("Received model files:");
-    for (const name of binFiles) {
-        console.log(" - %s", path.join(srcModelsDir, name));
+    console.log("Received TEE-authorized model files:");
+    for (const file of acceptedFiles) {
+        console.log(" - %s (%s)", file.path, file.address);
     }
 
-    return binFiles.length;
+    return acceptedFiles.length;
 }
 
 async function sleep(ms) {
@@ -372,16 +490,21 @@ async function countBinFiles(dir) {
     }
 }
 
+async function countAuthorizedModelFiles() {
+    const files = await receivedWorkerModelFiles();
+    return files.filter(file => file.authorized).length;
+}
+
 async function waitForModels(expected, { dir, pollMs = 2000, timeoutMs = 10 * 60 * 1000 } = {}) {
     const start = Date.now();
     while (true) {
-        const n = await countBinFiles(dir);
+        const n = dir === srcModelsDir ? await countAuthorizedModelFiles() : await countBinFiles(dir);
         if (n >= expected) {
-            console.log(`Received ${n}/${expected} model files.`);
+            console.log(`Received ${n}/${expected} TEE-authorized model files.`);
             return n; // Anzahl zurückgeben
         }
         if (Date.now() - start > timeoutMs) {
-            console.warn(`Timeout waiting for ${expected} models. Proceeding with ${n} present in ${dir}.`);
+            console.warn(`Timeout waiting for ${expected} TEE-authorized models. Proceeding with ${n} present in ${dir}.`);
             return n; // mit aktueller Anzahl fortfahren
         }
         await sleep(pollMs);

@@ -16,12 +16,20 @@ contract DeviceRegistry {
     address public owner;
     ITdxV4Attestation public tdxV4Attestation;
     mapping(address => Device) public devices;
+    mapping(address => bool) private knownDevice;
+    address[] private deviceAddresses;
     uint256 public number;
+
+    event DeviceRegistered(address indexed device);
+    event DeviceAuthorized(address indexed device);
+    event DeviceDeauthorized(address indexed device);
+    event DeviceLeft(address indexed device);
 
     constructor() {
         owner = msg.sender;
         // Add some initial authorized addresses for demonstration
         devices[msg.sender] = Device(true, "test_ip", "", "");
+        addKnownDevice(msg.sender);
     }
 
     modifier onlyOwner() {
@@ -34,12 +42,22 @@ contract DeviceRegistry {
         tdxV4Attestation = ITdxV4Attestation(_tdxV4Attestation);
     }
 
-    function authorizeAddress(address _address) public {
+    function authorizeAddress(address _address) public onlyOwner {
+        addKnownDevice(_address);
         devices[_address].authorized = true;
+        emit DeviceAuthorized(_address);
     }
 
-    function deauthorizeAddress(address _address) public {
+    function deauthorizeAddress(address _address) public onlyOwner {
         devices[_address].authorized = false;
+        emit DeviceDeauthorized(_address);
+    }
+
+    function leaveNetwork() public {
+        require(knownDevice[msg.sender], "device not registered");
+        require(devices[msg.sender].authorized, "device not authorized");
+        devices[msg.sender].authorized = false;
+        emit DeviceLeft(msg.sender);
     }
 
     function isAuthorized(address _address) public view returns (bool) {
@@ -48,6 +66,26 @@ contract DeviceRegistry {
         } else {
             return false;
         }
+    }
+
+    function getAuthorizedDevices() external view returns (address[] memory) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < deviceAddresses.length; i++) {
+            if (devices[deviceAddresses[i]].authorized) {
+                count++;
+            }
+        }
+
+        address[] memory authorized = new address[](count);
+        uint256 index = 0;
+        for (uint256 i = 0; i < deviceAddresses.length; i++) {
+            address device = deviceAddresses[i];
+            if (devices[device].authorized) {
+                authorized[index] = device;
+                index++;
+            }
+        }
+        return authorized;
     }
 
     function getDevice(
@@ -70,11 +108,20 @@ contract DeviceRegistry {
     ) public {
         require(address(tdxV4Attestation) != address(0), "tdx attestation not configured");
         tdxV4Attestation.verifyAndAttestOnChain(quote);
+        addKnownDevice(_address);
         devices[_address] = Device(
             true,
             _public_ip,
             _msg_broker_ip,
             _public_key
         );
+        emit DeviceRegistered(_address);
+    }
+
+    function addKnownDevice(address _address) internal {
+        if (!knownDevice[_address]) {
+            knownDevice[_address] = true;
+            deviceAddresses.push(_address);
+        }
     }
 }

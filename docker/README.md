@@ -10,6 +10,12 @@ Create a .env file in the same folder as the compose file with the following val
 ```
 # Round configuration
 CLIENT_LIMIT=2
+MODEL_SUBMISSION_DEADLINE_MS=60000
+GM_UPDATE_TIMEOUT_MS=30000
+GM_UPDATE_TIMEOUT_LOOPS=4
+AGGREGATION_UPDATE_ESTIMATE_MS=30000
+GM_UPDATE_POLL_MS=5000
+AGGREGATOR_TIMEOUT_REPORT_PERCENT=50
 EPOCH=1
 ROUND=5
 #DOCKER=phala
@@ -114,6 +120,18 @@ IPFS_GATEWAY= https://xxxxx.....xxxxxx.mypinata.cloud
 INITIAL_GM_CID=bafxxxxx...
 IPFS_PROVIDER=pinata
 ```
+
+## Timing variables
+
+`MODEL_SUBMISSION_DEADLINE_MS` controls how long the aggregator waits for model submissions before aggregating with the files that arrived.
+
+`GM_UPDATE_TIMEOUT_MS * GM_UPDATE_TIMEOUT_LOOPS` is the total worker-side wait budget before workers report an aggregator timeout on-chain. As a starting point, keep it above:
+
+```
+MODEL_SUBMISSION_DEADLINE_MS + AGGREGATION_UPDATE_ESTIMATE_MS + GM_UPDATE_POLL_MS
+```
+
+With a 50% timeout report threshold, 1 of 2 eligible non-aggregator workers is enough to abort a stalled round. Use 51% when both workers should have to agree in a two-worker setup.
 
 ## Helpfull commands
 

@@ -391,7 +391,10 @@ def start_client(server_ip: str, device_id: str) -> None:
     filename = f"wb_client_{device_id}.enc"
     package = (data_dir() / "lm.bin.enc").read_bytes()
     sock.send_multipart([filename.encode("utf-8"), package])
-    print(f"Server: {sock.recv_string()}")
+    reply = sock.recv_string()
+    print(f"Server: {reply}")
+    if reply != "File received and decrypted":
+        raise RuntimeError(f"model transfer failed: {reply}")
 
 
 def aggregate(num_files: int | None = None) -> None:

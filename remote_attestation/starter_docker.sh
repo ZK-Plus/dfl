@@ -508,6 +508,11 @@ cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $AGGREGATOR_SELECTION_
 
 echo "GMStorage Addresse wurde in AggregatorSelection gesetzt"
 
+AGGREGATOR_TIMEOUT_REPORT_PERCENT=${AGGREGATOR_TIMEOUT_REPORT_PERCENT:-50}
+cast send --rpc-url $rpc_url --private-key $PRIVATE_KEY_0 $AGGREGATOR_SELECTION_ADDRESS "setTimeoutReportThresholdPercent(uint256)" "$AGGREGATOR_TIMEOUT_REPORT_PERCENT"
+
+echo "Aggregator timeout report threshold wurde auf ${AGGREGATOR_TIMEOUT_REPORT_PERCENT}% gesetzt"
+
 
 #echo "Authorization Status:"
 #[ "$(cast call --rpc-url $rpc_url $DEVICE_REGISTRY_ADDRESS "isAuthorized(address)" $ADDRESS_1)" = "0x$(printf '%063d1')" ] && echo $ADDRESS_1: yes || echo $ADDRESS_1: no
