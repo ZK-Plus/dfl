@@ -21,10 +21,89 @@ const addAccountToWallet = (account) => {
     web3.eth.accounts.wallet.add(account);
 };
 
+const jsonReplacer = (_key, value) => {
+    if (typeof value === "bigint") {
+        return value.toString();
+    }
+    return value;
+};
+
+const serializeError = (error) => ({
+    name: error?.name,
+    message: error?.message,
+    code: error?.code,
+    reason: error?.reason,
+    data: error?.data,
+    cause: error?.cause?.message || error?.cause,
+    receipt: error?.receipt
+        ? {
+            status: error.receipt.status?.toString?.() ?? error.receipt.status,
+            transactionHash: error.receipt.transactionHash,
+            blockNumber: error.receipt.blockNumber?.toString?.() ?? error.receipt.blockNumber,
+            gasUsed: error.receipt.gasUsed?.toString?.() ?? error.receipt.gasUsed,
+            from: error.receipt.from,
+            to: error.receipt.to,
+        }
+        : undefined,
+});
+
+const logJson = (label, payload) => {
+    console.log(label, JSON.stringify(payload, jsonReplacer));
+};
+
+const withGasBuffer = (gasEstimate, percent = 30n) => {
+    const estimate = BigInt(gasEstimate);
+    return ((estimate * (100n + percent)) + 99n) / 100n;
+};
+
 const getGMStorageContract = () => {
     const abi = JSON.parse(fs.readFileSync("./abi/gm.json", "utf-8"));
     const address = gm_storage_address;
     return new web3.eth.Contract(abi, address);
+};
+
+const getAggregatorSelectionContract = () => {
+    const abi = JSON.parse(fs.readFileSync("./abi/AggregatorSelection.json", "utf-8"));
+    return new web3.eth.Contract(abi, aggregator_address);
+};
+
+const getAggregatorSelectionDiagnostics = async (contract, caller) => {
+    const [state, round, lastRoundAggregator, topContributor, authorizedDevices, latestBlock] =
+        await Promise.all([
+            contract.methods.getSystemState().call().catch((error) => ({ error: serializeError(error) })),
+            getRound().catch((error) => ({ error: serializeError(error) })),
+            getLastRoundsAggregator().catch((error) => ({ error: serializeError(error) })),
+            getTopContributor().catch((error) => ({ error: serializeError(error) })),
+            getAuthorizedDevices().catch((error) => ({ error: serializeError(error) })),
+            web3.eth.getBlock("latest").catch((error) => ({ error: serializeError(error) })),
+        ]);
+
+    const stateHasError = Boolean(state?.error);
+    const blockHasError = Boolean(latestBlock?.error);
+    return {
+        caller,
+        contract: aggregator_address,
+        gmStorage: gm_storage_address,
+        deviceRegistry: device_registry_address,
+        state: stateHasError ? state : {
+            systemState: state?.[0],
+            currentAggregator: state?.[1],
+            brokerEndpoint: state?.[2],
+            timeToAggregate: state?.[3]?.toString?.() ?? state?.[3],
+            timeToSelect: state?.[4]?.toString?.() ?? state?.[4],
+        },
+        round,
+        lastRoundAggregator,
+        topContributor,
+        authorizedDeviceCount: Array.isArray(authorizedDevices) ? authorizedDevices.length : undefined,
+        authorizedDevices,
+        latestBlock: blockHasError ? latestBlock : {
+            number: latestBlock?.number?.toString?.() ?? latestBlock?.number,
+            timestamp: latestBlock?.timestamp?.toString?.() ?? latestBlock?.timestamp,
+            prevrandao: latestBlock?.prevrandao,
+            hash: latestBlock?.hash,
+        },
+    };
 };
 // send contract call to blockchain
 export const getCurrentGM = async () => {
@@ -372,27 +451,49 @@ export const setAggregatorEndpoint = async (newEndpoint) => {
     }
 };
 export const triggerAggregatorSelection = async () => {
-    const abi = JSON.parse(fs.readFileSync("./abi/AggregatorSelection.json", "utf-8"));
     const address = aggregator_address;
-    const contract = new web3.eth.Contract(abi, address);
+    const contract = getAggregatorSelectionContract();
     const account = web3.eth.accounts.privateKeyToAccount(privateKey);
     addAccountToWallet(account);
+    logJson("[aggregator-selection] preflight diagnostics", await getAggregatorSelectionDiagnostics(contract, account.address));
+    const method = contract.methods.triggerAggregatorSelection();
+    try {
+        await method.call({ from: account.address });
+        console.log("[aggregator-selection] eth_call simulation succeeded");
+    }
+    catch (error) {
+        console.error("[aggregator-selection] eth_call simulation failed:", serializeError(error));
+        throw error;
+    }
     const gasPrice = await web3.eth.getGasPrice();
-    const gasEstimate = await contract.methods.triggerAggregatorSelection().estimateGas({ from: account.address });
+    let gasEstimate;
+    try {
+        gasEstimate = await method.estimateGas({ from: account.address });
+        console.log("[aggregator-selection] gas estimate:", gasEstimate.toString(), "gasPrice:", gasPrice.toString());
+    }
+    catch (error) {
+        console.error("[aggregator-selection] gas estimate failed:", serializeError(error));
+        throw error;
+    }
+    const gasLimit = withGasBuffer(gasEstimate);
+    console.log("[aggregator-selection] gas limit with buffer:", gasLimit.toString());
     const tx = {
         from: account.address,
         to: address,
-        gas: gasEstimate,
+        gas: gasLimit.toString(),
         gasPrice: gasPrice,
-        data: contract.methods.triggerAggregatorSelection().encodeABI(),
+        data: method.encodeABI(),
     };
     try {
         const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
         console.log("Transaction receipt: ", receipt);
+        logJson("[aggregator-selection] post-transaction diagnostics", await getAggregatorSelectionDiagnostics(contract, account.address));
         return receipt;
     }
     catch (error) {
+        console.error("[aggregator-selection] transaction failed:", serializeError(error));
+        logJson("[aggregator-selection] failed-transaction diagnostics", await getAggregatorSelectionDiagnostics(contract, account.address));
         console.error("Error sending transaction: ", error);
         throw error;
     }

@@ -133,6 +133,26 @@ MODEL_SUBMISSION_DEADLINE_MS + AGGREGATION_UPDATE_ESTIMATE_MS + GM_UPDATE_POLL_M
 
 With a 50% timeout report threshold, 1 of 2 eligible non-aggregator workers is enough to abort a stalled round. Use 51% when both workers should have to agree in a two-worker setup.
 
+## Observability
+
+The Python compose setup starts a local observability stack:
+
+- Grafana: http://127.0.0.1:3000
+- Prometheus: http://127.0.0.1:9090
+- Loki: http://127.0.0.1:3100
+- Tempo: http://127.0.0.1:3200
+- OpenTelemetry Collector OTLP HTTP: http://127.0.0.1:4318
+
+Grafana is provisioned with Prometheus, Loki and Tempo datasources plus the `DFL Training Overview` dashboard. Node workers export one trace per training round. Each trace contains spans for fetching the global model, local training, model transfer, aggregation, update, penalties and aggregator selection.
+
+In Grafana, open `Explore`, choose the `Tempo` datasource and search with:
+
+```
+{ resource.service.name = "dfl-node-worker" }
+```
+
+The `dfl.round`, `dfl.role`, `dfl.account` and `dfl.duration_ms` attributes can be used to inspect one training round across all participating nodes.
+
 ## Helpfull commands
 
 Open Kubu Web UI

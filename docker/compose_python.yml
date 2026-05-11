@@ -22,6 +22,8 @@ x-worker-env: &worker-env
   GM_UPDATE_TIMEOUT_LOOPS: ${GM_UPDATE_TIMEOUT_LOOPS:-4}
   AGGREGATION_UPDATE_ESTIMATE_MS: ${AGGREGATION_UPDATE_ESTIMATE_MS:-30000}
   GM_UPDATE_POLL_MS: ${GM_UPDATE_POLL_MS:-5000}
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+  OTEL_SERVICE_NAME: dfl-node-worker
   EPOCH: ${EPOCH}
   ROUND: ${ROUND}
   PYTHON_SERVICE_URL: http://127.0.0.1:8000
@@ -34,9 +36,101 @@ x-worker-common: &worker-common
   depends_on:
     smart-contracts:
       condition: service_completed_successfully
+    otel-collector:
+      condition: service_started
   command: ["/dfl/start_node_python_worker.sh"]
 
 services:
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_LOG_LEVEL: warn
+      GF_LOG_FILTERS: authn.service:error
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=24h
+      - --log.level=warn
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yml", "-log.level=warn"]
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: promtail
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/promtail.yml", "-log.level=warn"]
+    volumes:
+      - ./observability/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-positions:/tmp
+    depends_on:
+      loki:
+        condition: service_started
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yml", "-log.level=warn"]
+    ports:
+      - "127.0.0.1:3200:3200"
+    volumes:
+      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/tmp/tempo
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.100.0
+    container_name: otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector.yml", "--set=service.telemetry.logs.level=warn"]
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:9464:9464"
+    volumes:
+      - ./observability/otel-collector/otel-collector.yml:/etc/otel-collector.yml:ro
+    depends_on:
+      tempo:
+        condition: service_started
+
   anvil:
     image: ghcr.io/foundry-rs/foundry:${FOUNDRY_IMAGE_TAG:-nightly-dd0a687aa36ec731b6ea2cda2aa4f32e192814fa}
     container_name: anvil
@@ -161,3 +255,10 @@ services:
       TRAIN_LABELS_SRC: /dfl/config/training_data/train-labels-2.idx1-ubyte
       RSA_PRIVATE_KEY_FILE: /dfl/keys/private_key_2.pem
       RSA_PUBLIC_KEY_FILE: /dfl/keys/public_key_2.pem
+
+volumes:
+  grafana-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  promtail-positions:
