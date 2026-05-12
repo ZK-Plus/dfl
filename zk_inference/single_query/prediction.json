@@ -1,0 +1,39 @@
+{
+  "source_model": "/Users/sonak/uni/masterthesis/Master-Thesis/agent/downloads/onchain-3e645c76ab2e-aggregated.bin",
+  "source_images": "/Users/sonak/uni/masterthesis/Master-Thesis/neural_network/data/t10k-images.idx3-ubyte",
+  "source_labels": "/Users/sonak/uni/masterthesis/Master-Thesis/neural_network/data/t10k-labels.idx1-ubyte",
+  "source_index": 0,
+  "true_label": 7,
+  "predicted_label": 7,
+  "correct": true,
+  "logits": [
+    0.018597155311036895,
+    -1.3097129089482604,
+    -0.6827766139406325,
+    0.49042157137367615,
+    0.4223749149986403,
+    1.1974197998862468,
+    -4.6353748642434836,
+    6.690669965871052,
+    -0.816886908201487,
+    2.638064687488316
+  ],
+  "probabilities": [
+    0.00123104975244928,
+    0.00032613534939491726,
+    0.0006104819776053486,
+    0.0019732692375622803,
+    0.0018434614411454498,
+    0.004001582497466365,
+    1.172414654214108e-05,
+    0.9725680751846776,
+    0.0005338625870063096,
+    0.016900357826150268
+  ],
+  "files": {
+    "single_image_idx": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/single_query/single-image.idx3-ubyte",
+    "single_label_idx": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/single_query/single-label.idx1-ubyte",
+    "preview_pgm": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/single_query/single-image.pgm",
+    "ezkl_input_json": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/out/input.json"
+  }
+}

@@ -1,32 +1,28 @@
 #!/usr/bin/env python3
 """
 Create an EZKL-friendly input.json from an MNIST IDX image file using the same
-normalization as the C++ code in neural_network/src/functions.cpp.
+normalization as the active python_worker implementation.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 
-IMAGE_START = 16
-IMAGE_SIZE = 28 * 28
+REPO_ROOT = Path(__file__).resolve().parents[1]
+PYTHON_WORKER_DIR = REPO_ROOT / "python_worker"
+if str(PYTHON_WORKER_DIR) not in sys.path:
+    sys.path.insert(0, str(PYTHON_WORKER_DIR))
 
-
-def normalize(byte_value: int) -> float:
-    return (byte_value - 127.5) / 127.5
+from thesis_pytorch_compat.cli import INPUT_SIZE, read_idx_images  # type: ignore
 
 
 def load_image(image_path: Path, index: int) -> list[float]:
-    raw = image_path.read_bytes()
-    start = IMAGE_START + index * IMAGE_SIZE
-    end = start + IMAGE_SIZE
-    if end > len(raw):
-        raise ValueError(f"Image index {index} exceeds file length")
-
-    return [normalize(value) for value in raw[start:end]]
+    images = read_idx_images(image_path, limit=index + 1)
+    return [float(value) for value in images[index].tolist()]
 
 
 def main() -> int:
@@ -59,7 +55,7 @@ def main() -> int:
 
     print(f"Wrote {args.out}")
     print(f"Image index: {args.index}")
-    print(f"Input length: {len(image)}")
+    print(f"Input length: {len(image)} (expected {INPUT_SIZE})")
     print(f"Value range: [{min(image):.6f}, {max(image):.6f}]")
     return 0
 

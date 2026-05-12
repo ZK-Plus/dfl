@@ -1,0 +1,119 @@
+{
+  "source_model": "/Users/sonak/uni/masterthesis/Master-Thesis/agent/downloads/onchain-3e645c76ab2e-aggregated.bin",
+  "source_implementation": "python_worker/thesis_pytorch_compat/cli.py",
+  "export_dir": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/out",
+  "model": {
+    "class": "FederatedMLP",
+    "input_size": 784,
+    "batch_size_training": 32,
+    "layout": [
+      {
+        "name": "fc1.weight",
+        "rows": 200,
+        "cols": 784
+      },
+      {
+        "name": "fc1.bias",
+        "rows": 200,
+        "cols": 1
+      },
+      {
+        "name": "fc2.weight",
+        "rows": 50,
+        "cols": 200
+      },
+      {
+        "name": "fc2.bias",
+        "rows": 50,
+        "cols": 1
+      },
+      {
+        "name": "fc3.weight",
+        "rows": 10,
+        "cols": 50
+      },
+      {
+        "name": "fc3.bias",
+        "rows": 10,
+        "cols": 1
+      }
+    ],
+    "hidden_activations": "tanh",
+    "native_output": "logits"
+  },
+  "files": {
+    "torch_state_dict_fp64": "model_state_dict_fp64.pt",
+    "torch_state_dict_fp32": "model_state_dict.pt",
+    "onnx_probabilities_model": "model.onnx",
+    "onnx_logits_model": "model_logits.onnx"
+  },
+  "onnx": {
+    "static_batch_size": 1,
+    "opset_version": 18
+  },
+  "parameter_summaries": {
+    "fc1.weight": {
+      "shape": [
+        200,
+        784
+      ],
+      "min": -0.5502675045984673,
+      "max": 0.568684366708009,
+      "mean": 5.634149204335656e-05
+    },
+    "fc1.bias": {
+      "shape": [
+        200
+      ],
+      "min": -0.5035581083665359,
+      "max": 0.505105135236019,
+      "mean": 0.005863391351403346
+    },
+    "fc2.weight": {
+      "shape": [
+        50,
+        200
+      ],
+      "min": -0.5864679785338329,
+      "max": 0.5959893827493581,
+      "mean": -0.001154136994621564
+    },
+    "fc2.bias": {
+      "shape": [
+        50
+      ],
+      "min": -0.33676251095642507,
+      "max": 0.5199107196743523,
+      "mean": 0.05678092342056443
+    },
+    "fc3.weight": {
+      "shape": [
+        10,
+        50
+      ],
+      "min": -0.7461213889880035,
+      "max": 0.8263631529574169,
+      "mean": 0.006201994088572446
+    },
+    "fc3.bias": {
+      "shape": [
+        10
+      ],
+      "min": -0.502851944864251,
+      "max": 0.38589189023134823,
+      "mean": -0.016539599055675595
+    }
+  },
+  "parity_check": {
+    "comparison": "python_worker_float64_vs_export_float32_softmax",
+    "batch_size": 4,
+    "seed": 7,
+    "max_abs_diff": 4.1848046317127796e-07,
+    "mean_abs_diff": 5.585377410913239e-08
+  },
+  "notes": [
+    "The model is loaded through python_worker.read_model_bin.",
+    "The Python worker's native model output is logits; softmax is only wrapped for probability export.",
+    "For EZKL, model_logits.onnx is the preferred artifact."
+  ]
+}
