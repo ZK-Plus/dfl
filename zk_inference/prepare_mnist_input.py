@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Create an EZKL-friendly input.json from an MNIST IDX image file using the same
-normalization as the active python_worker implementation.
+normalization as the active neural-network worker implementation.
 """
 
 from __future__ import annotations
@@ -13,11 +13,10 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PYTHON_WORKER_DIR = REPO_ROOT / "python_worker"
-if str(PYTHON_WORKER_DIR) not in sys.path:
-    sys.path.insert(0, str(PYTHON_WORKER_DIR))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from thesis_pytorch_compat.cli import INPUT_SIZE, read_idx_images  # type: ignore
+from neural_network.cli import INPUT_SIZE, read_idx_images  # type: ignore
 
 
 def load_image(image_path: Path, index: int) -> list[float]:
@@ -30,7 +29,7 @@ def main() -> int:
     parser.add_argument(
         "--images",
         type=Path,
-        default=Path("neural_network/data/t10k-images.idx3-ubyte"),
+        default=Path("mnist/data/t10k-images.idx3-ubyte"),
         help="Path to the MNIST IDX image file",
     )
     parser.add_argument(

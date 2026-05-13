@@ -1,41 +1,39 @@
-# Neural Network for Federated Learning
+# Thesis PyTorch Compatibility Adapter
 
-This repository contains the backbone for a federated learning system. It builds upon the [Digit-Recognition](https://github.com/Mimsqueeze/Digit-Recognition) repository for digit recognition but has been highly extended with the logic for federated learning and communication using the ZeroMQ message broker.
+This example ports the C++ interface to Python and
+PyTorch while keeping the Node blockchain orchestrator contract unchanged.
 
-## Structure
+The CLI intentionally mirrors the C++ executable:
 
-- **src/**: Contains the main source code for the neural network and federated learning logic.
-- **test/**: Contains test scripts written in Python to validate the functionality of the system.
-
-## Features
-
-- **Federated Learning**: Implements federated learning to train models across multiple decentralized devices without sharing raw data.
-- **ZeroMQ Communication**: Utilizes ZeroMQ as a message broker for efficient communication between nodes.
-
-This project builds on the [Digit-Recognition](https://github.com/Mimsqueeze/Digit-Recognition) repository. Special thanks to the original authors for their work.
-
-## Neural Network calls for local use
-
-Change into the neural_network folder.
-
-To simulate 3 rounds of training the federated averag.
-
+```bash
+python -m neural_network.cli get_random_wb
+python -m neural_network.cli train 30 <aggregator-public-key-der-hex>
+python -m neural_network.cli server <client-limit> [private-key.pem]
+python -m neural_network.cli client <aggregator-ip> <device-id>
+python -m neural_network.cli aggregate <num-files>
 ```
-./start.exe simulate
+
+It reads and writes the original six-matrix binary layout:
+
+```text
+W1, B1, W2, B2, W3, B3 as little-endian float64 values in Eigen column-major order
 ```
-To train one round.
+
+The active model is the original MNIST MLP:
+
+```text
+784 -> 200 -> 50 -> 10
+tanh -> tanh -> logits
 ```
-./start.exe train 30 
-```
-To start the zerompq server.
-```
-./start.exe server
-```
-To start the clients.
-```
-./start.exe client * 1
-```
-To calculate the federated average.
-```
-./start.exe aggregate 3
+
+The Node server talks to `neural_network/service.py` over
+HTTP. The service exposes endpoints for training, transfer, aggregation, and
+the ZMQ aggregation server lifecycle.
+
+## Dependencies
+
+Use the repository virtual environment and install:
+
+```bash
+pip install torch cryptography pyzmq
 ```

@@ -42,7 +42,7 @@ def _repo_path(path: str | Path) -> Path:
 
 def _run(args: list[str], cwd: Path = REPO_ROOT) -> dict[str, Any]:
     env = os.environ.copy()
-    env["PYTHONPATH"] = f"{REPO_ROOT / 'python_worker'}:{REPO_ROOT / 'zk_inference'}:{env.get('PYTHONPATH', '')}"
+    env["PYTHONPATH"] = f"{REPO_ROOT}:{REPO_ROOT / 'zk_inference'}:{env.get('PYTHONPATH', '')}"
     completed = subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=True, check=False)
     return {
         "command": args,
@@ -73,8 +73,8 @@ def export_model(model_path: str, out_dir: str = "zk_inference/out") -> dict[str
 def create_single_image_query(
     model_path: str,
     index: int | None = None,
-    images: str = "neural_network/data/t10k-images.idx3-ubyte",
-    labels: str = "neural_network/data/t10k-labels.idx1-ubyte",
+    images: str = "mnist/data/t10k-images.idx3-ubyte",
+    labels: str = "mnist/data/t10k-labels.idx1-ubyte",
     out_dir: str = "zk_inference/single_query",
     input_json: str = "zk_inference/out/input.json",
 ) -> dict[str, Any]:

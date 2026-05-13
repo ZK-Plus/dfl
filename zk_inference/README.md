@@ -2,20 +2,20 @@
 
 Dieses Verzeichnis exportiert das aktuell vom Python-Worker erzeugte federated-learning Modell in einen EZKL-kompatiblen Inferenzpfad.
 
-Der neue Pfad verwendet `python_worker/thesis_pytorch_compat/cli.py` als Quelle der Wahrheit fuer Modellklasse, Modelllayout und MNIST-Normalisierung. Die frueheren Annahmen aus dem C++-Code werden hier nicht mehr nachgebaut.
+Der neue Pfad verwendet `neural_network/cli.py` als Quelle der Wahrheit fuer Modellklasse, Modelllayout und MNIST-Normalisierung. Die frueheren Annahmen aus dem C++-Code werden hier nicht mehr nachgebaut.
 
 ## Ziel
 
 Der Trainings- und Aggregationspfad liegt jetzt im Python-Worker:
 
-- Training, Transfer, Aggregation und Signatur in `python_worker/thesis_pytorch_compat/cli.py`
+- Training, Transfer, Aggregation und Signatur in `neural_network/cli.py`
 - Orchestrierung und Blockchain/IPFS-Anbindung weiterhin ueber `node_server`
 - Zero-Knowledge-Inference in `zk_inference`
 
 Der Exportpfad ist:
 
 ```text
-python_worker aggregated.bin -> PyTorch state_dict -> ONNX -> EZKL
+neural_network worker aggregated.bin -> PyTorch state_dict -> ONNX -> EZKL
 ```
 
 ## Voraussetzungen
@@ -24,13 +24,13 @@ python_worker aggregated.bin -> PyTorch state_dict -> ONNX -> EZKL
 pip install -r zk_inference/requirements.txt
 ```
 
-Falls der Python-Worker noch nicht installiert ist:
+Falls das `neural_network`-Paket noch nicht installiert ist:
 
 ```bash
-pip install -e python_worker
+pip install -e neural_network
 ```
 
-Das ist optional, wenn die Skripte aus dem Repository-Root gestartet werden, weil `zk_inference` den lokalen `python_worker` automatisch in den Importpfad aufnimmt.
+Das ist optional, wenn die Skripte aus dem Repository-Root gestartet werden, weil `zk_inference` das lokale `neural_network`-Paket automatisch in den Importpfad aufnimmt.
 
 ## Export
 
@@ -38,7 +38,7 @@ Modell inspizieren:
 
 ```bash
 python3 zk_inference/export_model.py \
-  --model neural_network/data/results_iid/aggregated.bin \
+  --model mnist/data/results_iid/aggregated.bin \
   --inspect
 ```
 
@@ -46,11 +46,11 @@ PyTorch- und ONNX-Artefakte erzeugen:
 
 ```bash
 python3 zk_inference/export_model.py \
-  --model neural_network/data/results_iid/aggregated.bin \
+  --model mnist/data/results_iid/aggregated.bin \
   --out zk_inference/out
 ```
 
-Wenn `node_server/data/results_iid/aggregated.bin` existiert, wird dieser Pfad automatisch als Default verwendet. Andernfalls nimmt der Exporter automatisch das neueste `*-aggregated.bin` aus `IPFS output`. `neural_network/data/results_iid/aggregated.bin` bleibt nur noch ein Legacy-Fallback.
+Wenn `node_server/data/results_iid/aggregated.bin` existiert, wird dieser Pfad automatisch als Default verwendet. Andernfalls nimmt der Exporter automatisch das neueste `*-aggregated.bin` aus `IPFS output`. `mnist/data/results_iid/aggregated.bin` bleibt nur noch ein Legacy-Fallback.
 
 Fuer EZKL wird das ONNX-Modell standardmaessig mit festem `batch=1` exportiert. Das vermeidet symbolische Batch-Dimensionen, die bei `gen_settings` haeufig zu Fehlern fuehren.
 
@@ -58,20 +58,20 @@ Fuer EZKL wird das ONNX-Modell standardmaessig mit festem `batch=1` exportiert. 
 
 Im Zielordner entstehen:
 
-- `model_state_dict_fp64.pt`: PyTorch-Checkpoint mit den Float64-Parametern aus dem Python-Worker
+- `model_state_dict_fp64.pt`: PyTorch-Checkpoint mit den Float64-Parametern aus `neural_network`
 - `model_state_dict.pt`: PyTorch-Checkpoint mit Float32-Parametern fuer ONNX/EZKL
 - `model.onnx`: ONNX-Modell mit Softmax-Output
 - `model_logits.onnx`: ONNX-Modell mit Logits-Output, bevorzugt fuer EZKL
-- `export_manifest.json`: Modellquelle, Layout aus `python_worker`, Parameterstatistiken und Paritaetscheck
+- `export_manifest.json`: Modellquelle, Layout aus `neural_network`, Parameterstatistiken und Paritaetscheck
 
 ## EZKL Input Vorbereiten
 
-Ein einzelnes identifizierbares MNIST-Testbild mit derselben Normalisierung wie im Python-Worker:
+Ein einzelnes identifizierbares MNIST-Testbild mit derselben Normalisierung wie in `neural_network`:
 
 ```bash
 .venv/bin/python zk_inference/create_single_mnist_query.py \
-  --images neural_network/data/t10k-images.idx3-ubyte \
-  --labels neural_network/data/t10k-labels.idx1-ubyte \
+  --images mnist/data/t10k-images.idx3-ubyte \
+  --labels mnist/data/t10k-labels.idx1-ubyte \
   --out-dir zk_inference/single_query \
   --input-json zk_inference/out/input.json
 ```

@@ -15,7 +15,7 @@ From the repository root:
 
 ```bash
 pip install -r zk_inference/requirements.txt
-pip install -e python_worker
+pip install -e neural_network
 pip install -r agent/requirements.txt
 ```
 

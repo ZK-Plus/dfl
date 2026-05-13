@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Export the model produced by python_worker into PyTorch and ONNX artifacts for EZKL.
+Export the model produced by the neural-network worker into PyTorch and ONNX artifacts for EZKL.
 
 The model definition, binary reader, and constants are imported from
-python_worker/thesis_pytorch_compat/cli.py so zk_inference follows the active
+neural_network/cli.py so zk_inference follows the active
 Python worker implementation instead of duplicating model-layout assumptions.
 """
 
@@ -24,12 +24,11 @@ except ImportError:  # pragma: no cover - handled at runtime
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PYTHON_WORKER_DIR = REPO_ROOT / "python_worker"
-if str(PYTHON_WORKER_DIR) not in sys.path:
-    sys.path.insert(0, str(PYTHON_WORKER_DIR))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 try:
-    from thesis_pytorch_compat.cli import (  # type: ignore
+    from neural_network.cli import (  # type: ignore
         BATCH_SIZE,
         INPUT_SIZE,
         MODEL_LAYOUT,
@@ -38,8 +37,8 @@ try:
     )
 except ImportError as exc:  # pragma: no cover - handled at runtime
     raise RuntimeError(
-        "Could not import python_worker. Run this script from the repository root "
-        "or ensure python_worker is present."
+        "Could not import neural_network.cli. Run this script "
+        "from the repository root and ensure neural_network is present."
     ) from exc
 
 
@@ -60,7 +59,7 @@ def default_model_path() -> Path:
     latest_ipfs_model = latest_ipfs_output_model()
     if latest_ipfs_model is not None:
         return latest_ipfs_model
-    legacy_model = REPO_ROOT / "neural_network" / "data" / "results_iid" / "aggregated.bin"
+    legacy_model = REPO_ROOT / "mnist" / "data" / "results_iid" / "aggregated.bin"
     if legacy_model.exists():
         return legacy_model
     return DEFAULT_MODEL_CANDIDATES[0]
@@ -120,7 +119,7 @@ def check_float_export_parity(model_fp64: FederatedMLP, model_fp32: FederatedMLP
         actual_probs = torch.softmax(model_fp32(inputs_fp64.to(torch.float32)), dim=1).to(torch.float64)
     abs_diff = (expected_probs - actual_probs).abs()
     return {
-        "comparison": "python_worker_float64_vs_export_float32_softmax",
+        "comparison": "neural_network_float64_vs_export_float32_softmax",
         "batch_size": batch_size,
         "seed": seed,
         "max_abs_diff": float(abs_diff.max().item()),
@@ -155,7 +154,7 @@ def write_manifest(
 ) -> None:
     manifest = {
         "source_model": str(model_path),
-        "source_implementation": "python_worker/thesis_pytorch_compat/cli.py",
+        "source_implementation": "neural_network/cli.py",
         "export_dir": str(export_dir),
         "model": {
             "class": "FederatedMLP",
@@ -184,7 +183,7 @@ def write_manifest(
         },
         "parity_check": parity,
         "notes": [
-            "The model is loaded through python_worker.read_model_bin.",
+            "The model is loaded through neural_network.read_model_bin.",
             "The Python worker's native model output is logits; softmax is only wrapped for probability export.",
             "For EZKL, model_logits.onnx is the preferred artifact.",
         ],
@@ -241,7 +240,7 @@ def export_artifacts(
         export_batch_size=export_batch_size,
     )
 
-    print(f"Loaded model through python_worker: {model_path}")
+    print(f"Loaded model through neural_network: {model_path}")
     print(f"Export directory: {output_dir}")
     print("Saved:")
     print(f"  - {output_dir / 'model_state_dict_fp64.pt'}")
@@ -256,13 +255,13 @@ def export_artifacts(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Export the active python_worker federated model into PyTorch and ONNX artifacts."
+        description="Export the active neural-network federated model into PyTorch and ONNX artifacts."
     )
     parser.add_argument(
         "--model",
         type=Path,
         default=default_model_path(),
-        help="Path to the aggregated model file produced by python_worker",
+        help="Path to the aggregated model file produced by the neural-network worker",
     )
     parser.add_argument(
         "--out",

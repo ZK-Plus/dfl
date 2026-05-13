@@ -38,7 +38,7 @@ x-worker-common: &worker-common
       condition: service_completed_successfully
     otel-collector:
       condition: service_started
-  command: ["/dfl/start_node_python_worker.sh"]
+  command: ["/dfl/start_node_neural_network.sh"]
 
 services:
   grafana:

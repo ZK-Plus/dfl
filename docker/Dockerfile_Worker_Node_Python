@@ -26,7 +26,7 @@ RUN python3 -m venv /opt/venv && \
 
 ENV PATH="/opt/venv/bin:${PATH}"
 
-COPY cloud_setup/ansible/config ./config
+COPY mnist ./config
 COPY docker/keys ./keys
 
 COPY node_server/package*.json ./node_server/
@@ -35,17 +35,17 @@ RUN npm ci
 
 WORKDIR /dfl
 COPY node_server ./node_server
-COPY python_worker ./python_worker
-COPY docker/start_node_python_worker.sh ./start_node_python_worker.sh
+COPY neural_network ./neural_network
+COPY docker/start_node_neural_network.sh ./start_node_neural_network.sh
 
-COPY neural_network/data/train-images.idx3-ubyte ./node_server/data/train-images.idx3-ubyte
-COPY neural_network/data/train-labels.idx1-ubyte ./node_server/data/train-labels.idx1-ubyte
-COPY neural_network/data/t10k-images.idx3-ubyte ./node_server/data/t10k-images.idx3-ubyte
-COPY neural_network/data/t10k-labels.idx1-ubyte ./node_server/data/t10k-labels.idx1-ubyte
-COPY neural_network/data/random_start.bin ./node_server/data/random_start.bin
+COPY mnist/data/train-images.idx3-ubyte ./node_server/data/train-images.idx3-ubyte
+COPY mnist/data/train-labels.idx1-ubyte ./node_server/data/train-labels.idx1-ubyte
+COPY mnist/data/t10k-images.idx3-ubyte ./node_server/data/t10k-images.idx3-ubyte
+COPY mnist/data/t10k-labels.idx1-ubyte ./node_server/data/t10k-labels.idx1-ubyte
+COPY mnist/data/random_start.bin ./node_server/data/random_start.bin
 COPY remote_attestation/apps/data/phala_tdx_quote ./node_server/attestation/
 
-RUN chmod +x /dfl/start_node_python_worker.sh && \
+RUN chmod +x /dfl/start_node_neural_network.sh && \
     mkdir -p /dfl/node_server/data/results_iid /dfl/node_server/received_models /dfl/node_server/attestation
 
 WORKDIR /dfl/node_server

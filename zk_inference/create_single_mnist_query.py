@@ -22,13 +22,12 @@ except ImportError:  # pragma: no cover - handled at runtime
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PYTHON_WORKER_DIR = REPO_ROOT / "python_worker"
-if str(PYTHON_WORKER_DIR) not in sys.path:
-    sys.path.insert(0, str(PYTHON_WORKER_DIR))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 if str(REPO_ROOT / "zk_inference") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "zk_inference"))
 
-from thesis_pytorch_compat.cli import INPUT_SIZE, read_idx_images, read_idx_labels  # type: ignore
+from neural_network.cli import INPUT_SIZE, read_idx_images, read_idx_labels  # type: ignore
 from export_model import default_model_path, load_worker_model  # type: ignore
 
 
@@ -127,8 +126,8 @@ def write_query_input(normalized_image: "torch.Tensor", out_path: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create a single-image MNIST inference query for EZKL.")
     parser.add_argument("--model", type=Path, default=default_model_path(), help="Model to use for prediction")
-    parser.add_argument("--images", type=Path, default=Path("neural_network/data/t10k-images.idx3-ubyte"))
-    parser.add_argument("--labels", type=Path, default=Path("neural_network/data/t10k-labels.idx1-ubyte"))
+    parser.add_argument("--images", type=Path, default=Path("mnist/data/t10k-images.idx3-ubyte"))
+    parser.add_argument("--labels", type=Path, default=Path("mnist/data/t10k-labels.idx1-ubyte"))
     parser.add_argument("--index", type=int, default=None, help="Use a specific MNIST test index")
     parser.add_argument("--search-limit", type=int, default=1000, help="Search range when --index is omitted")
     parser.add_argument("--out-dir", type=Path, default=Path("zk_inference/single_query"))

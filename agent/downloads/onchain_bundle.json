@@ -1,16 +1,16 @@
 {
   "source": "GMStorage",
   "bundle": {
-    "model_cid": "bafybeiffwg3q5o33bphjnhdhqgbwpbbveyyrvygitcfizgkctvlerabqkm",
-    "signature_cid": "bafkreiefr4fiw6zmccwiortntllxcyjamnezodmnh2sqbrxx27xi47ewhe",
-    "last_aggregator": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "model_cid": "bafybeig3iusvypm7ean3czzwv47fflw2xprpnl35ztzrqnakdlkn4nwsii",
+    "signature_cid": "bafkreihnub4if52tf6e67r7az7up4m2yy37qz2ojnopagjyjpeoc6qfcfi",
+    "last_aggregator": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
     "rpc_url": "http://127.0.0.1:8545",
     "gm_storage_address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
     "registry_address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
   },
   "download": {
-    "model_path": "agent/downloads/onchain-3e645c76ab2e-aggregated.bin",
-    "signature_path": "agent/downloads/onchain-2fd28288c5b8-aggregated.bin.sig",
+    "model_path": "agent/downloads/onchain-fff8895216f4-aggregated.bin",
+    "signature_path": "agent/downloads/onchain-2432d12d2b1d-aggregated.bin.sig",
     "model_size": 1340480,
     "signature_size": 256
   }
