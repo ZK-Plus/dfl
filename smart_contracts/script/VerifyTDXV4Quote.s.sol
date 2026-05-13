@@ -11,7 +11,7 @@ import {P256Probe} from "./common/P256Probe.sol";
 contract VerifyTDXV4Quote is Script, P256Probe {
     function run() external view {
         address dcapAddr = vm.envAddress("DCAP_TDX_V4_ADDRESS");
-        string memory quotePath = vm.envOr("QUOTE_PATH", string("./data/phala_tdx_quote"));
+        string memory quotePath = vm.envOr("QUOTE_PATH", string("../data/phala_tdx_quote"));
         string memory fullPath = string.concat(vm.projectRoot(), "/", quotePath);
         string memory quoteHex = vm.readFile(fullPath);
         bytes memory quoteBytes = vm.parseBytes(string.concat("0x", quoteHex));

@@ -22,8 +22,9 @@ except ImportError:  # pragma: no cover - handled at runtime
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+for import_root in (REPO_ROOT / "dfl", REPO_ROOT):
+    if str(import_root) not in sys.path:
+        sys.path.insert(0, str(import_root))
 if str(REPO_ROOT / "zk_inference") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "zk_inference"))
 
@@ -33,6 +34,15 @@ from export_model import default_model_path, load_worker_model  # type: ignore
 
 IMAGE_ROWS = 28
 IMAGE_COLS = 28
+
+
+def metadata_path(path: Path) -> str:
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.name
 
 
 def ensure_torch() -> None:
@@ -126,8 +136,8 @@ def write_query_input(normalized_image: "torch.Tensor", out_path: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create a single-image MNIST inference query for EZKL.")
     parser.add_argument("--model", type=Path, default=default_model_path(), help="Model to use for prediction")
-    parser.add_argument("--images", type=Path, default=Path("mnist/data/t10k-images.idx3-ubyte"))
-    parser.add_argument("--labels", type=Path, default=Path("mnist/data/t10k-labels.idx1-ubyte"))
+    parser.add_argument("--images", type=Path, default=Path("data/mnist/data/t10k-images.idx3-ubyte"))
+    parser.add_argument("--labels", type=Path, default=Path("data/mnist/data/t10k-labels.idx1-ubyte"))
     parser.add_argument("--index", type=int, default=None, help="Use a specific MNIST test index")
     parser.add_argument("--search-limit", type=int, default=1000, help="Search range when --index is omitted")
     parser.add_argument("--out-dir", type=Path, default=Path("zk_inference/single_query"))
@@ -149,9 +159,9 @@ def main() -> int:
     write_query_input(normalized_image, args.input_json)
 
     metadata = {
-        "source_model": str(args.model),
-        "source_images": str(args.images),
-        "source_labels": str(args.labels),
+        "source_model": metadata_path(args.model),
+        "source_images": metadata_path(args.images),
+        "source_labels": metadata_path(args.labels),
         "source_index": index,
         "true_label": label,
         "predicted_label": predicted,
@@ -159,14 +169,14 @@ def main() -> int:
         "logits": logits,
         "probabilities": probabilities,
         "files": {
-            "single_image_idx": str(image_path),
-            "single_label_idx": str(label_path),
-            "preview_pgm": str(preview_path),
-            "ezkl_input_json": str(args.input_json),
+            "single_image_idx": metadata_path(image_path),
+            "single_label_idx": metadata_path(label_path),
+            "preview_pgm": metadata_path(preview_path),
+            "ezkl_input_json": metadata_path(args.input_json),
         },
     }
-    metadata_path = args.out_dir / "prediction.json"
-    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    metadata_file = args.out_dir / "prediction.json"
+    metadata_file.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
 
     print(f"Selected MNIST test index: {index}")
     print(f"True label: {label}")
@@ -176,7 +186,7 @@ def main() -> int:
     print(f"Wrote {label_path}")
     print(f"Wrote {preview_path}")
     print(f"Wrote {args.input_json}")
-    print(f"Wrote {metadata_path}")
+    print(f"Wrote {metadata_file}")
     return 0
 
 

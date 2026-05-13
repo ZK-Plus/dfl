@@ -1,38 +1,92 @@
-# smart_contracts
+# Smart Contracts
 
-This directory is a focused Foundry deployment bundle extracted from
-`smart_contract/` and `remote_attestation/`.
+This directory is the active Foundry project for the DFL coordination and attestation layer.
 
-Included here:
+It contains the minimum Solidity and deployment bundle required by the Docker-based prototype:
 
-- core contracts required by the DFL pipeline:
-  - `src/core/GMStorage.sol`
-  - `src/core/AggregatorSelection.sol`
+- DFL coordination contracts:
   - `src/core/DeviceRegistry.sol`
-- TDX/DCAP attestation contracts used by the deployment flow:
+  - `src/core/AggregatorSelection.sol`
+  - `src/core/GMStorage.sol`
+- TDX/DCAP quote verification:
   - `src/attestation/AutomataDcapTdxV4Attestation.sol`
   - `src/attestation/tdx/QuoteV4Auth/*`
-- deployment and verification scripts:
+- deployment and utility scripts:
   - `script/Deploy.s.sol`
   - `script/DeployTDXV4Attestation.s.sol`
   - `script/ProbeP256Verifier.s.sol`
   - `script/UploadPccsCollaterals.s.sol`
   - `script/VerifyTDXV4Quote.s.sol`
   - `starter_docker.sh`
-- runtime quote asset:
-  - `data/phala_tdx_quote`
-- Solidity dependencies needed by those scripts and contracts:
-  - `lib/forge-std`
-  - `lib/openzeppelin-contracts/contracts`
-  - `lib/p256-verifier/src`
-  - `lib/automata-dcap-v3-attestation/contracts`
-  - `lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs`
+- runtime quote/collateral input:
+  - `../data/phala_tdx_quote`
 
-Intentionally not copied:
+The contract and attestation deployment code is consolidated here so Docker builds use one focused source tree.
 
-- Rust guest/method code
-- publisher app sources
-- tests, images, docs, and generated `out/` artifacts from `remote_attestation`
-- unrelated smart contract examples and legacy build outputs
+## Dependency Layout
 
-The Docker smart-contract services now use this directory as the primary source.
+The vendored Solidity dependencies are intentionally minimized:
+
+- `lib/forge-std`
+- `lib/openzeppelin-contracts`
+- `lib/p256-verifier`
+- `lib/automata-dcap-v3-attestation`
+- `lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs`
+
+The PCCS subproject is also a Foundry project. Its local `lib/forge-std` and `lib/openzeppelin-contracts` entries are symlinks to the minimized top-level dependencies. This avoids duplicate vendored copies while keeping Foundry imports inside the allowed project paths.
+
+## Build
+
+From this directory:
+
+```bash
+forge build
+```
+
+The PCCS subproject can be checked separately:
+
+```bash
+cd smart_contracts/lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs
+forge build
+```
+
+## Docker Deployment
+
+The normal deployment path is `starter_docker.sh`, executed by the Docker Compose smart-contract service.
+
+It performs:
+
+1. deployment of `DeviceRegistry`, `AggregatorSelection`, and `GMStorage`,
+2. deployment/configuration of the Automata PCCS helper and DAO contracts,
+3. deployment of `AutomataDcapTdxV4Attestation`,
+4. authorization of the attestation contract as PCCS reader,
+5. upload of PCCS collateral,
+6. registration of initial global model metadata.
+
+The tested local entry point is:
+
+```bash
+docker compose -f compose.yml down --volumes --remove-orphans
+KEEP_ALIVE=0 docker compose -f compose.yml up --build --force-recreate
+```
+
+## Generated Artifacts
+
+Foundry generates build outputs in:
+
+- `smart_contracts/out`
+- `smart_contracts/cache`
+- `smart_contracts/broadcast`
+- `smart_contracts/lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs/out`
+- `smart_contracts/lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs/cache`
+- `smart_contracts/lib/automata-dcap-v3-attestation/lib/automata-on-chain-pccs/broadcast`
+
+These directories are build/deployment artifacts, not source code.
+
+
+## Other Readme´s
+- [Neural Network README](../dfl/neural_network/README.md)
+- [Node Server README](../dfl/node_server/README.md)
+- [SMART Contracts README](./smart_contracts/README.md)
+- [ZK Inference README](./zk_inference/README.md)
+- [Agent README](./agent/README.md) 

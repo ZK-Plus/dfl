@@ -22,6 +22,12 @@ contract P256Configuration is Script {
     }
 
     function simulateVerify() public returns (address verifier) {
+        address configuredVerifier = vm.envOr("P256_VERIFIER_ADDRESS", address(0));
+        if (configuredVerifier != address(0)) {
+            console.log("P256Verifier address: ", configuredVerifier);
+            return configuredVerifier;
+        }
+
         bytes memory data = abi.encodePacked(sha256(test_message), test_sig, test_pubkey);
 
         bool precompileVerified = verifyWithFfi(RIP7212_P256_PRECOMPILE, data);
@@ -51,13 +57,14 @@ contract P256Configuration is Script {
     }
 
     function verifyWithFfi(address verifier, bytes memory data) private returns (bool) {
-        string[] memory inputs = new string[](6);
+        string[] memory inputs = new string[](7);
         inputs[0] = "cast";
         inputs[1] = "call";
         inputs[2] = vm.toString(verifier);
-        inputs[3] = vm.toString(data);
-        inputs[4] = "--rpc-url";
-        inputs[5] = vm.envString("RPC_URL");
+        inputs[3] = "--data";
+        inputs[4] = vm.toString(data);
+        inputs[5] = "--rpc-url";
+        inputs[6] = vm.envString("RPC_URL");
 
         bytes memory ret = vm.ffi(inputs);
 

@@ -13,8 +13,9 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+for import_root in (REPO_ROOT / "dfl", REPO_ROOT):
+    if str(import_root) not in sys.path:
+        sys.path.insert(0, str(import_root))
 
 from neural_network.cli import INPUT_SIZE, read_idx_images  # type: ignore
 
@@ -29,7 +30,7 @@ def main() -> int:
     parser.add_argument(
         "--images",
         type=Path,
-        default=Path("mnist/data/t10k-images.idx3-ubyte"),
+        default=Path("data/mnist/data/t10k-images.idx3-ubyte"),
         help="Path to the MNIST IDX image file",
     )
     parser.add_argument(

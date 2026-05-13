@@ -79,19 +79,11 @@ if [ "$ENABLE_DCAP" = "1" ]; then
             exit 1
         fi
 
-        P256_ARTIFACT=""
-        for candidate in \
-            "$SCRIPT_DIR/out/P256Verifier.sol/P256Verifier.json" \
-            "$SCRIPT_DIR/out/lib/p256-verifier/src/P256Verifier.sol/P256Verifier.json"
-        do
-            if [ -f "$candidate" ]; then
-                P256_ARTIFACT="$candidate"
-                break
-            fi
-        done
+        forge build --force "$P256_SOURCE_PATH"
 
-        if [ -z "$P256_ARTIFACT" ]; then
-            echo "P256Verifier artifact not found after compilation."
+        P256_ARTIFACT="$SCRIPT_DIR/out/P256Verifier.sol/P256Verifier.json"
+        if [ ! -f "$P256_ARTIFACT" ]; then
+            echo "P256Verifier artifact not found after compilation: $P256_ARTIFACT"
             exit 1
         fi
 
@@ -99,23 +91,72 @@ if [ "$ENABLE_DCAP" = "1" ]; then
         if [ -n "$P256_RUNTIME" ] && [ "${P256_RUNTIME#0x}" = "$P256_RUNTIME" ]; then
             P256_RUNTIME="0x$P256_RUNTIME"
         fi
-        if [ -z "$P256_RUNTIME" ]; then
+        if [ -z "$P256_RUNTIME" ] || [ "$P256_RUNTIME" = "0x" ]; then
             echo "Failed to extract P256Verifier deployed bytecode from $P256_ARTIFACT"
             exit 1
         fi
 
-        cast rpc --rpc-url $rpc_url anvil_setCode $FALLBACK_P256_VERIFIER_ADDRESS $P256_RUNTIME
+        NATIVE_P256_VERIFIER_ADDRESS=0x0000000000000000000000000000000000000100
+        install_p256_verifier() {
+            local verifier=$1
+            cast rpc --rpc-url $rpc_url anvil_setCode "$verifier" "$P256_RUNTIME"
+        }
+
+        probe_p256_route() {
+            local verifier=$1
+            local output
+            output=$(P256_VERIFIER_ADDRESS=$verifier forge script script/ProbeP256Verifier.s.sol --rpc-url $rpc_url)
+            printf '%s\n' "$output" >&2
+            printf '%s\n' "$output" | sed -n 's/.*P256 effective route: //p' | tail -n 1
+        }
 
         P256_MODE=${P256_MODE:-native}
         if [ "$P256_MODE" = "native" ]; then
-            export P256_VERIFIER_ADDRESS=0x0000000000000000000000000000000000000100
-            echo "Using native P256 precompile at $P256_VERIFIER_ADDRESS"
-        else
+            P256_ROUTE=$(probe_p256_route "$NATIVE_P256_VERIFIER_ADDRESS")
+            if [ "$P256_ROUTE" = "native-precompile" ]; then
+                export P256_VERIFIER_ADDRESS=$NATIVE_P256_VERIFIER_ADDRESS
+                echo "Using native P256 precompile at $P256_VERIFIER_ADDRESS"
+            elif [ "$P256_ROUTE" = "unavailable" ] || [ -z "$P256_ROUTE" ]; then
+                echo "Native P256 precompile unavailable; installing local P256 verifier at $NATIVE_P256_VERIFIER_ADDRESS"
+                install_p256_verifier "$NATIVE_P256_VERIFIER_ADDRESS"
+                P256_ROUTE=$(probe_p256_route "$NATIVE_P256_VERIFIER_ADDRESS")
+                if [ "$P256_ROUTE" != "native-precompile" ]; then
+                    echo "Native P256 verifier unavailable at $NATIVE_P256_VERIFIER_ADDRESS"
+                    exit 1
+                fi
+                export P256_VERIFIER_ADDRESS=$NATIVE_P256_VERIFIER_ADDRESS
+                echo "Using native P256 verifier address at $P256_VERIFIER_ADDRESS"
+            elif [ "${P256_REQUIRE_NATIVE:-0}" = "1" ]; then
+                echo "Native P256 precompile requested but unavailable at $NATIVE_P256_VERIFIER_ADDRESS"
+                exit 1
+            elif [ "$P256_ROUTE" = "fallback-contract" ]; then
+                export P256_VERIFIER_ADDRESS=$FALLBACK_P256_VERIFIER_ADDRESS
+                echo "Native P256 precompile unavailable; using fallback P256 verifier at $P256_VERIFIER_ADDRESS"
+            else
+                echo "Neither native nor fallback P256 verifier is available."
+                exit 1
+            fi
+        elif [ "$P256_MODE" = "fallback" ]; then
+            install_p256_verifier "$FALLBACK_P256_VERIFIER_ADDRESS"
+            P256_ROUTE=$(probe_p256_route "$FALLBACK_P256_VERIFIER_ADDRESS")
+            if [ "$P256_ROUTE" != "fallback-contract" ]; then
+                echo "Fallback P256 verifier unavailable at $FALLBACK_P256_VERIFIER_ADDRESS"
+                exit 1
+            fi
             export P256_VERIFIER_ADDRESS=$FALLBACK_P256_VERIFIER_ADDRESS
+            echo "Using fallback P256 verifier at $P256_VERIFIER_ADDRESS"
+        else
+            export P256_VERIFIER_ADDRESS=${P256_VERIFIER_ADDRESS:-$FALLBACK_P256_VERIFIER_ADDRESS}
+            if [ "$P256_VERIFIER_ADDRESS" = "$NATIVE_P256_VERIFIER_ADDRESS" ] || [ "$P256_VERIFIER_ADDRESS" = "$FALLBACK_P256_VERIFIER_ADDRESS" ]; then
+                install_p256_verifier "$P256_VERIFIER_ADDRESS"
+            fi
+            P256_ROUTE=$(probe_p256_route "$P256_VERIFIER_ADDRESS")
+            if [ "$P256_ROUTE" = "unavailable" ] || [ -z "$P256_ROUTE" ]; then
+                echo "Configured P256 verifier unavailable at $P256_VERIFIER_ADDRESS"
+                exit 1
+            fi
+            echo "Using configured P256 verifier at $P256_VERIFIER_ADDRESS"
         fi
-
-        echo "Probing effective P256 verifier route"
-        forge script script/ProbeP256Verifier.s.sol --rpc-url $rpc_url
     else
         export P256_VERIFIER_ADDRESS=${P256_VERIFIER_ADDRESS:-0xc2b78104907F722DABAc4C69f826a522B2754De4}
     fi
@@ -194,7 +235,7 @@ if [ "$ENABLE_DCAP" = "1" ]; then
 
 	    UPLOAD_PCCS_COLLATERALS=${UPLOAD_PCCS_COLLATERALS:-1}
 	    if [ "$UPLOAD_PCCS_COLLATERALS" = "1" ]; then
-        PCCS_QUOTE_PATH=${PCCS_QUOTE_PATH:-./data/phala_tdx_quote}
+        PCCS_QUOTE_PATH=${PCCS_QUOTE_PATH:-../data/phala_tdx_quote}
         PCCS_TMP_DIR=${PCCS_TMP_DIR:-./data/pccs_temp}
         mkdir -p "$PCCS_TMP_DIR"
         echo "PCCS_TMP_DIR: $PCCS_TMP_DIR"

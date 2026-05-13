@@ -1,82 +1,63 @@
-# zk_inference
+# ZK Inference
 
-Dieses Verzeichnis exportiert das aktuell vom Python-Worker erzeugte federated-learning Modell in einen EZKL-kompatiblen Inferenzpfad.
+This directory exports a trained DFL model into an EZKL-compatible inference pipeline and generates a proof for a single MNIST image.
 
-Der neue Pfad verwendet `neural_network/cli.py` als Quelle der Wahrheit fuer Modellklasse, Modelllayout und MNIST-Normalisierung. Die frueheren Annahmen aus dem C++-Code werden hier nicht mehr nachgebaut.
+`neural_network` is the source of truth for:
 
-## Ziel
+- model class,
+- binary parameter layout,
+- MNIST normalization,
+- and native prediction behavior.
 
-Der Trainings- und Aggregationspfad liegt jetzt im Python-Worker:
-
-- Training, Transfer, Aggregation und Signatur in `neural_network/cli.py`
-- Orchestrierung und Blockchain/IPFS-Anbindung weiterhin ueber `node_server`
-- Zero-Knowledge-Inference in `zk_inference`
-
-Der Exportpfad ist:
+## Pipeline
 
 ```text
-neural_network worker aggregated.bin -> PyTorch state_dict -> ONNX -> EZKL
+aggregated.bin -> PyTorch state_dict -> ONNX -> EZKL witness/proof/verify
 ```
 
-## Voraussetzungen
+The preferred ONNX artifact for EZKL is `model_logits.onnx`, because the native worker model returns logits.
+
+## Install
 
 ```bash
 pip install -r zk_inference/requirements.txt
+pip install -e dfl/neural_network
 ```
 
-Falls das `neural_network`-Paket noch nicht installiert ist:
+The editable `neural_network` install is optional when scripts are launched from the repository root, because the scripts add the local package to the import path.
+
+## Export Model
+
+Inspect a model:
 
 ```bash
-pip install -e neural_network
-```
-
-Das ist optional, wenn die Skripte aus dem Repository-Root gestartet werden, weil `zk_inference` das lokale `neural_network`-Paket automatisch in den Importpfad aufnimmt.
-
-## Export
-
-Modell inspizieren:
-
-```bash
-python3 zk_inference/export_model.py \
-  --model mnist/data/results_iid/aggregated.bin \
+.venv/bin/python zk_inference/export_model.py \
+  --model dfl/node_server/data/results_iid/aggregated.bin \
   --inspect
 ```
 
-PyTorch- und ONNX-Artefakte erzeugen:
+Export PyTorch and ONNX artifacts:
 
 ```bash
-python3 zk_inference/export_model.py \
-  --model mnist/data/results_iid/aggregated.bin \
+.venv/bin/python zk_inference/export_model.py \
+  --model dfl/node_server/data/results_iid/aggregated.bin \
   --out zk_inference/out
 ```
 
-Wenn `node_server/data/results_iid/aggregated.bin` existiert, wird dieser Pfad automatisch als Default verwendet. Andernfalls nimmt der Exporter automatisch das neueste `*-aggregated.bin` aus `IPFS output`. `mnist/data/results_iid/aggregated.bin` bleibt nur noch ein Legacy-Fallback.
+If no explicit model is given, the exporter tries the active aggregated model path first and then falls back to the newest `*-aggregated.bin` in `IPFS output`.
 
-Fuer EZKL wird das ONNX-Modell standardmaessig mit festem `batch=1` exportiert. Das vermeidet symbolische Batch-Dimensionen, die bei `gen_settings` haeufig zu Fehlern fuehren.
-
-## Ergebnisdateien
-
-Im Zielordner entstehen:
-
-- `model_state_dict_fp64.pt`: PyTorch-Checkpoint mit den Float64-Parametern aus `neural_network`
-- `model_state_dict.pt`: PyTorch-Checkpoint mit Float32-Parametern fuer ONNX/EZKL
-- `model.onnx`: ONNX-Modell mit Softmax-Output
-- `model_logits.onnx`: ONNX-Modell mit Logits-Output, bevorzugt fuer EZKL
-- `export_manifest.json`: Modellquelle, Layout aus `neural_network`, Parameterstatistiken und Paritaetscheck
-
-## EZKL Input Vorbereiten
-
-Ein einzelnes identifizierbares MNIST-Testbild mit derselben Normalisierung wie in `neural_network`:
+## Create a Single-Image Query
 
 ```bash
 .venv/bin/python zk_inference/create_single_mnist_query.py \
-  --images mnist/data/t10k-images.idx3-ubyte \
-  --labels mnist/data/t10k-labels.idx1-ubyte \
+  --model dfl/node_server/data/results_iid/aggregated.bin \
+  --images data/mnist/data/t10k-images.idx3-ubyte \
+  --labels data/mnist/data/t10k-labels.idx1-ubyte \
   --out-dir zk_inference/single_query \
   --input-json zk_inference/out/input.json
 ```
 
-Das erzeugt ein Ein-Bild-Dataset, ein PGM-Preview, Prediction-Metadaten und das EZKL-`input.json`:
+This creates:
 
 - `zk_inference/single_query/single-image.idx3-ubyte`
 - `zk_inference/single_query/single-label.idx1-ubyte`
@@ -84,17 +65,9 @@ Das erzeugt ein Ein-Bild-Dataset, ein PGM-Preview, Prediction-Metadaten und das 
 - `zk_inference/single_query/prediction.json`
 - `zk_inference/out/input.json`
 
-Das `input.json` hat das Format:
+The current single-image helper is an evaluation helper: it can include ground-truth label metadata so local runs can report whether the prediction was correct. A deployment-style inference query should only require an input image and should not rely on the label file.
 
-```json
-{
-  "input_data": [[... 784 normalisierte Werte ...]]
-}
-```
-
-## EZKL Lauf
-
-Wenn `pip install ezkl` zwar das Python-Modul installiert, aber kein `ezkl`-Binary in `.venv/bin` anlegt, nutzt den Python-Runner:
+## Run EZKL
 
 ```bash
 .venv/bin/python zk_inference/run_ezkl.py \
@@ -103,7 +76,7 @@ Wenn `pip install ezkl` zwar das Python-Modul installiert, aber kein `ezkl`-Bina
   --data input.json
 ```
 
-Fuer einen schnelleren lokalen Debug-Lauf ohne Kalibrierung:
+For faster local debugging:
 
 ```bash
 .venv/bin/python zk_inference/run_ezkl.py \
@@ -113,19 +86,30 @@ Fuer einen schnelleren lokalen Debug-Lauf ohne Kalibrierung:
   --skip-calibration
 ```
 
-Der Runner fuehrt diese Schritte ueber die Python-API aus:
+The runner performs:
 
 1. `gen_settings`
-2. `calibrate_settings`
+2. optional `calibrate_settings`
 3. `compile_circuit`
-4. `get_srs` oder lokaler `gen_srs`-Fallback
+4. `get_srs` or local `gen_srs` fallback
 5. `setup`
 6. `gen_witness`
 7. `prove`
 8. `verify`
 
-## Hinweise
+## Output Files
 
-- Das native Modell des Python-Workers gibt Logits zurueck.
-- `model_logits.onnx` ist deshalb der sauberste EZKL-Einstieg.
-- `model.onnx` existiert nur als zusaetzliche Softmax-Variante fuer Wahrscheinlichkeitsausgaben.
+`zk_inference/out` normally contains:
+
+- `model_state_dict_fp64.pt`
+- `model_state_dict.pt`
+- `model.onnx`
+- `model_logits.onnx`
+- `export_manifest.json`
+- `input.json`
+- `settings.json`
+- `witness.json`
+- `proof.json`
+- `vk.key`
+
+`model.onnx` includes a Softmax output for probability inspection. `model_logits.onnx` is the cleaner proof target.

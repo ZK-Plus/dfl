@@ -1,39 +1,39 @@
 {
-  "source_model": "/Users/sonak/uni/masterthesis/Master-Thesis/agent/downloads/onchain-b210577b8942-aggregated.bin",
-  "source_images": "/Users/sonak/uni/masterthesis/Master-Thesis/mnist/data/t10k-images.idx3-ubyte",
-  "source_labels": "/Users/sonak/uni/masterthesis/Master-Thesis/mnist/data/t10k-labels.idx1-ubyte",
+  "source_model": "agent/downloads/onchain-cf84bdba1ea0-aggregated.bin",
+  "source_images": "data/mnist/data/t10k-images.idx3-ubyte",
+  "source_labels": "data/mnist/data/t10k-labels.idx1-ubyte",
   "source_index": 0,
   "true_label": 7,
   "predicted_label": 7,
   "correct": true,
   "logits": [
-    -1.0090587321678315,
-    -0.37298319518421746,
-    -0.8558305575705952,
-    2.9341204004219485,
-    0.21584258679370533,
-    0.8451337572542562,
-    -5.221589402834337,
-    7.150106251456278,
-    -0.8411082228065023,
-    3.0829706491801727
+    -0.6987685689210525,
+    1.2946339625196632,
+    -1.6308816235842878,
+    1.1796911025342705,
+    -0.3095612916927828,
+    0.9095913078178449,
+    -3.905574763412026,
+    6.970578693136216,
+    -1.0020661797275952,
+    1.0957198538616661
   ],
   "probabilities": [
-    0.00027610938242941395,
-    0.0005215852007107859,
-    0.00032183058545246277,
-    0.014242364719553943,
-    0.0009398294468845775,
-    0.001763383330879094,
-    4.0888609285518535e-06,
-    0.9650759520196238,
-    0.0003266037327917971,
-    0.016528252720745505
+    0.0004607814355314892,
+    0.0033823511478755465,
+    0.00018141927091893642,
+    0.0030150855771325837,
+    0.0006800260446029083,
+    0.00230142482175604,
+    1.8655063798921123e-05,
+    0.9868477815341545,
+    0.0003402314802735776,
+    0.0027722436239555467
   ],
   "files": {
-    "single_image_idx": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/single_query/single-image.idx3-ubyte",
-    "single_label_idx": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/single_query/single-label.idx1-ubyte",
-    "preview_pgm": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/single_query/single-image.pgm",
-    "ezkl_input_json": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/out/input.json"
+    "single_image_idx": "zk_inference/single_query/single-image.idx3-ubyte",
+    "single_label_idx": "zk_inference/single_query/single-label.idx1-ubyte",
+    "preview_pgm": "zk_inference/single_query/single-image.pgm",
+    "ezkl_input_json": "zk_inference/out/input.json"
   }
 }

@@ -3,7 +3,7 @@
 Export the model produced by the neural-network worker into PyTorch and ONNX artifacts for EZKL.
 
 The model definition, binary reader, and constants are imported from
-neural_network/cli.py so zk_inference follows the active
+dfl/neural_network/cli.py so zk_inference follows the active
 Python worker implementation instead of duplicating model-layout assumptions.
 """
 
@@ -24,8 +24,9 @@ except ImportError:  # pragma: no cover - handled at runtime
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+for import_root in (REPO_ROOT / "dfl", REPO_ROOT):
+    if str(import_root) not in sys.path:
+        sys.path.insert(0, str(import_root))
 
 try:
     from neural_network.cli import (  # type: ignore
@@ -38,13 +39,22 @@ try:
 except ImportError as exc:  # pragma: no cover - handled at runtime
     raise RuntimeError(
         "Could not import neural_network.cli. Run this script "
-        "from the repository root and ensure neural_network is present."
+        "from the repository root and ensure dfl/neural_network is present."
     ) from exc
 
 
 DEFAULT_MODEL_CANDIDATES = (
-    REPO_ROOT / "node_server" / "data" / "results_iid" / "aggregated.bin",
+    REPO_ROOT / "dfl" / "node_server" / "data" / "results_iid" / "aggregated.bin",
 )
+
+
+def metadata_path(path: Path) -> str:
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.name
 
 
 def ensure_torch() -> None:
@@ -59,7 +69,7 @@ def default_model_path() -> Path:
     latest_ipfs_model = latest_ipfs_output_model()
     if latest_ipfs_model is not None:
         return latest_ipfs_model
-    legacy_model = REPO_ROOT / "mnist" / "data" / "results_iid" / "aggregated.bin"
+    legacy_model = REPO_ROOT / "data" / "mnist" / "data" / "results_iid" / "aggregated.bin"
     if legacy_model.exists():
         return legacy_model
     return DEFAULT_MODEL_CANDIDATES[0]
@@ -153,9 +163,9 @@ def write_manifest(
     export_batch_size: int,
 ) -> None:
     manifest = {
-        "source_model": str(model_path),
-        "source_implementation": "neural_network/cli.py",
-        "export_dir": str(export_dir),
+        "source_model": metadata_path(model_path),
+        "source_implementation": "dfl/neural_network/cli.py",
+        "export_dir": metadata_path(export_dir),
         "model": {
             "class": "FederatedMLP",
             "input_size": INPUT_SIZE,
