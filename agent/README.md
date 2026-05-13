@@ -1,13 +1,18 @@
-# Local LangChain Agent for IPFS + ZK Inference
+# Agent: Contract-Based Retrieval and ZK Inference
 
-This folder adds an agent layer around the existing thesis pipeline:
+This folder contains a local agent layer around the DFL and ZK inference pipeline.
 
-1. The agent reads the current model CID, signature CID, and last aggregator from the `GMStorage` smart contract.
-2. Both artifacts are fetched from the local IPFS node.
-3. The last aggregator's public key is read from `DeviceRegistry`.
-4. The downloaded model signature is verified with RSA-SHA256/PKCS1v15.
-5. A local MCP server exposes `zk_inference` as tools.
-6. The agent exports the verified model, creates one single-image MNIST query, runs EZKL, and returns the prediction plus proof artifact.
+The normal flow is:
+
+1. Read the current global model CID, signature CID, and last aggregator from `GMStorage`.
+2. Fetch model and signature from the local IPFS/Kubo node.
+3. Read the last aggregator's public key from `DeviceRegistry`.
+4. Verify the model signature with RSA-SHA256 and PKCS1v15 padding.
+5. Export the verified model to ONNX through `zk_inference`.
+6. Create a single-image MNIST query.
+7. Run EZKL to generate and verify a proof for the prediction.
+
+The smart contracts are the source of truth. Direct IPFS scanning is kept only as a debug fallback.
 
 ## Install
 
@@ -15,42 +20,26 @@ From the repository root:
 
 ```bash
 pip install -r zk_inference/requirements.txt
-pip install -e neural_network
+pip install -e dfl/neural_network
 pip install -r agent/requirements.txt
 ```
 
-If you only want the deterministic local pipeline, `agent/requirements.txt` is not needed. It is only required for LangChain LLM mode and the MCP Python package.
+`agent/requirements.txt` is only needed for LangChain, Ollama, and MCP mode. The deterministic pipeline can run without an LLM.
 
-## Configure IPFS
+## Contract Source
 
-Use the IPFS API URL, not the browser web UI URL:
-
-```bash
-export IPFS_API_URL=http://127.0.0.1:5001
-export IPFS_ROOT=/
-```
-
-For an immutable DAG/CID path, use:
-
-```bash
-export IPFS_ROOT=/ipfs/bafybeifplj2s3yegn7ko7tdnwpoxa4c5uaqnk2ajnw5geqm34slcj6b6mu
-```
-
-The URL you pasted opens the IPFS Web UI. The agent talks to the same daemon through `/api/v0/...`.
-
-## Configure Blockchain Source
-
-By default the agent uses the smart contract as the source of truth:
+The agent expects a running local chain and local IPFS API:
 
 ```bash
 export RPC_URL=http://127.0.0.1:8545
+export IPFS_API_URL=http://127.0.0.1:5001
 export GM_STORAGE_ADDRESS=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 export REGISTRY_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
 ```
 
-If you omit these, the agent tries to read them from `docker/.env`. When `docker/.env` contains Docker-internal `http://anvil:8545`, the local agent maps it to `http://127.0.0.1:8545`.
+If values are omitted, the scripts try to read them from `.env` in the repository root. Docker-internal `http://anvil:8545` is mapped to `http://127.0.0.1:8545` for local host execution.
 
-Fetch only the on-chain model bundle:
+Fetch and verify only the on-chain model bundle:
 
 ```bash
 .venv/bin/python agent/blockchain_source.py \
@@ -62,93 +51,93 @@ Fetch only the on-chain model bundle:
   --verify
 ```
 
-`--verify` reads `getLastRoundsAggregator()` from `GMStorage`, fetches that address's public key from `DeviceRegistry`, and verifies the raw `.sig` over the raw model bytes before any inference step.
-
-## Fast Local Run
-
-This fetches the latest model bundle and runs the whole proof pipeline without an LLM:
+## Full Deterministic Run
 
 ```bash
 .venv/bin/python agent/run_agent.py \
-  --ipfs-api-url http://127.0.0.1:5001 \
+  --source contract \
   --rpc-url http://127.0.0.1:8545 \
+  --gm-storage-address 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 \
   --registry-address 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
+  --ipfs-api-url http://127.0.0.1:5001 \
   --skip-calibration
 ```
 
-`--source contract` is the default. For debugging old local files you can still use `--source ipfs-scan --ipfs-root /`.
+## Docker / Compose
 
-In `--source ipfs-scan` mode the IPFS selector uses the newest complete pair of model plus signature. It first tries an exact filename match like `model.bin` plus `model.bin.sig`; if your training writes model and signature with slightly different timestamps, it pairs the nearest signature within `120` seconds. This matches artifacts like:
+`agent/Dockerfile` now packages only the agent/runtime logic.
+`zk_inference/Dockerfile` packages the proof pipeline separately.
 
-```text
-2026-05-12T06-27-14-781Z-aggregated.bin
-2026-05-12T06-27-14-797Z-aggregated.bin.sig
-```
-
-To change the pairing window:
+In `compose.yml`, `zk-inference` runs as its own container and `agent` starts
+after `VM-0`, `VM-1`, and `VM-2` have completed successfully.
+The agent still runs this command by default:
 
 ```bash
---pair-window-seconds 10
+python agent/run_agent.py \
+  --source contract \
+  --rpc-url http://127.0.0.1:8545 \
+  --gm-storage-address 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 \
+  --registry-address 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
+  --ipfs-api-url http://127.0.0.1:5001 \
+  --skip-calibration
 ```
 
-To fail when the newest model has no pair instead, add:
-
-```bash
---require-latest-model
-```
+Inside Docker, loopback URLs are rewritten to the Compose services automatically,
+and the agent forwards proof execution to `http://zk-inference:8090`.
 
 Use a specific MNIST test image:
 
 ```bash
-.venv/bin/python agent/run_agent.py --index 7 --skip-calibration
+.venv/bin/python agent/run_agent.py --source contract --index 7 --skip-calibration
 ```
 
-Output includes:
+The output includes:
 
-- fetched model path in `agent/downloads`
-- fetched signature path in `agent/downloads`
-- selected/predicted label from `zk_inference/single_query/prediction.json`
-- proof path, normally `zk_inference/out/proof.json`
+- downloaded model and signature paths in `agent/downloads`,
+- signature verification status,
+- prediction metadata from `zk_inference/single_query/prediction.json`,
+- proof path, normally `zk_inference/out/proof.json`,
+- EZKL witness, settings, and verification key paths.
 
-## LangChain LLM Mode
+## LangChain and Ollama Mode
 
-Start Ollama locally and make sure the model is available:
+The current LLM mode uses local Ollama, not an OpenAI API key:
 
 ```bash
 ollama pull gemma4:e2b
 ollama serve
 ```
 
-Then run:
+Then:
 
 ```bash
 export OLLAMA_BASE_URL=http://127.0.0.1:11434
 export OLLAMA_MODEL=gemma4:e2b
 
-.venv/bin/python agent/run_agent.py --llm --skip-calibration
+.venv/bin/python agent/run_agent.py --llm --source contract --skip-calibration
 ```
 
-No OpenAI API key is needed in this mode.
+In this mode LangChain can use local IPFS/RAG helpers and ZK tools exposed through MCP.
 
-In this mode LangChain gets two local IPFS/RAG tools and the ZK tools through MCP:
+## MCP Server
 
-- `rag_search_ipfs_models`
-- `fetch_latest_model_bundle`
-- `export_model`
-- `create_single_image_query`
-- `run_ezkl`
-- `prove_single_image`
-
-## Run the MCP Server Directly
+Run the MCP server directly:
 
 ```bash
 .venv/bin/python agent/zk_mcp_server.py
 ```
 
-External MCP clients can start this server over stdio. The server does not reimplement ZK logic; it calls the existing scripts in `zk_inference`.
+The MCP server does not reimplement proof logic. It wraps the existing scripts in `zk_inference`.
 
-## Notes
+## Debug IPFS Scan
 
-- `--skip-calibration` is the pragmatic default for local debugging.
-- The signature is fetched and copied next to the proof artifacts, but cryptographic signature verification is not performed in this folder yet.
-- If your latest model is not in IPFS MFS root, point `IPFS_ROOT` at the exact MFS folder or `/ipfs/<cid>` DAG path.
+For debugging old local artifacts, use:
+
+```bash
+.venv/bin/python agent/ipfs_rag.py \
+  --api-url http://127.0.0.1:5001 \
+  --root / \
+  --fetch
+```
+
+`ipfs-scan` mode selects the newest complete model/signature pair. It first tries an exact filename match, then pairs the nearest timestamped signature within a configurable window.

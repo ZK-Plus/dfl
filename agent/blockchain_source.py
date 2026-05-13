@@ -12,6 +12,7 @@ import sys
 import urllib.request
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from ipfs_rag import DEFAULT_DOWNLOAD_DIR, DEFAULT_IPFS_API_URL, cat_path
 
@@ -23,7 +24,7 @@ except ImportError:  # pragma: no cover - reported at runtime
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_ENV_FILE = REPO_ROOT / "docker" / ".env"
+DEFAULT_ENV_FILE = REPO_ROOT / ".env"
 DEFAULT_RPC_URL = os.environ.get("RPC_URL") or os.environ.get("SEPOLIA_RPC_URL") or "http://127.0.0.1:8545"
 DEFAULT_GM_STORAGE_ADDRESS = os.environ.get("GM_STORAGE_ADDRESS", "")
 DEFAULT_REGISTRY_ADDRESS = os.environ.get("REGISTRY_ADDRESS", "")
@@ -55,7 +56,40 @@ def normalize_host_rpc_url(rpc_url: str) -> str:
     rpc_url = rpc_url.strip()
     if "anvil:8545" in rpc_url:
         return rpc_url.replace("anvil:8545", "127.0.0.1:8545")
+    if _running_in_docker():
+        return _replace_loopback_service(rpc_url, {8545: "anvil"})
     return rpc_url
+
+
+def normalize_ipfs_api_url(api_url: str) -> str:
+    api_url = api_url.strip()
+    if "ipfs:5001" in api_url:
+        return api_url.replace("ipfs:5001", "127.0.0.1:5001")
+    if _running_in_docker():
+        return _replace_loopback_service(api_url, {5001: "ipfs"})
+    return api_url
+
+
+def _running_in_docker() -> bool:
+    return Path("/.dockerenv").exists() or os.environ.get("DOCKER", "").lower() in {"1", "true", "yes"}
+
+
+def _replace_loopback_service(url: str, service_ports: dict[int, str]) -> str:
+    parts = urlsplit(url)
+    hostname = parts.hostname
+    if hostname not in {"127.0.0.1", "localhost"} or parts.port is None:
+        return url
+    service_name = service_ports.get(parts.port)
+    if service_name is None:
+        return url
+    userinfo = ""
+    if parts.username is not None:
+        userinfo = parts.username
+        if parts.password is not None:
+            userinfo += f":{parts.password}"
+        userinfo += "@"
+    netloc = f"{userinfo}{service_name}:{parts.port}"
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
 
 
 def function_selector(signature: str) -> str:
@@ -296,12 +330,13 @@ def main(argv: list[str] | None = None) -> int:
 
     env_file = load_env_file(args.env_file)
     rpc_url = normalize_host_rpc_url(config_value("RPC_URL", args.rpc_url, env_file, DEFAULT_RPC_URL))
+    ipfs_api_url = normalize_ipfs_api_url(args.ipfs_api_url)
     address = config_value("GM_STORAGE_ADDRESS", args.gm_storage_address, env_file, DEFAULT_GM_STORAGE_ADDRESS)
     registry_address = config_value("REGISTRY_ADDRESS", args.registry_address, env_file, DEFAULT_REGISTRY_ADDRESS)
     bundle = read_current_bundle_from_contract(rpc_url, address, registry_address=registry_address or None)
     result: dict[str, Any] = {"bundle": bundle}
     if args.fetch:
-        download = fetch_onchain_bundle(bundle, args.out_dir, ipfs_api_url=args.ipfs_api_url)
+        download = fetch_onchain_bundle(bundle, args.out_dir, ipfs_api_url=ipfs_api_url)
         result["download"] = download
         if args.verify:
             result["verification"] = verify_download_with_registry(bundle, download, rpc_url, registry_address)

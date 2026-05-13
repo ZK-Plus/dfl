@@ -8,6 +8,8 @@ import asyncio
 import json
 import os
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,7 @@ from blockchain_source import (
     fetch_onchain_bundle,
     load_env_file,
     normalize_host_rpc_url,
+    normalize_ipfs_api_url,
     read_current_bundle_from_contract,
     verify_download_with_registry,
 )
@@ -25,14 +28,51 @@ from ipfs_rag import DEFAULT_DOWNLOAD_DIR, DEFAULT_IPFS_API_URL, DEFAULT_IPFS_RO
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def remote_prove_single_image(
+    service_url: str,
+    *,
+    model_path: str,
+    signature_path: str,
+    index: int | None,
+    workdir: str,
+    query_dir: str,
+    skip_calibration: bool,
+) -> dict[str, Any]:
+    payload = json.dumps(
+        {
+            "model_path": model_path,
+            "signature_path": signature_path,
+            "index": index,
+            "workdir": workdir,
+            "query_dir": query_dir,
+            "skip_calibration": skip_calibration,
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        service_url.rstrip("/") + "/prove-single-image",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=600) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"zk_inference service returned HTTP {exc.code}: {body}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Could not reach zk_inference service at {service_url}: {exc}") from exc
+
+
 def deterministic_pipeline(args: argparse.Namespace) -> dict[str, Any]:
+    ipfs_api_url = normalize_ipfs_api_url(args.ipfs_api_url)
     if args.source == "contract":
         env_file = load_env_file(args.env_file)
         rpc_url = normalize_host_rpc_url(args.rpc_url or env_file.get("RPC_URL", "http://127.0.0.1:8545"))
         gm_storage_address = args.gm_storage_address or env_file.get("GM_STORAGE_ADDRESS", "")
         registry_address = args.registry_address or env_file.get("REGISTRY_ADDRESS", "")
         bundle = read_current_bundle_from_contract(rpc_url, gm_storage_address, registry_address=registry_address)
-        download = fetch_onchain_bundle(bundle, args.download_dir, ipfs_api_url=args.ipfs_api_url)
+        download = fetch_onchain_bundle(bundle, args.download_dir, ipfs_api_url=ipfs_api_url)
         verification = verify_download_with_registry(bundle, download, rpc_url, registry_address)
         if not verification["ok"]:
             return {
@@ -43,28 +83,39 @@ def deterministic_pipeline(args: argparse.Namespace) -> dict[str, Any]:
             }
     else:
         bundle = discover_latest(
-            api_url=args.ipfs_api_url,
+            api_url=ipfs_api_url,
             root=args.ipfs_root,
             require_latest_model=args.require_latest_model,
             pair_window_seconds=args.pair_window_seconds,
         )
-        download = fetch_bundle(bundle, args.download_dir, api_url=args.ipfs_api_url)
+        download = fetch_bundle(bundle, args.download_dir, api_url=ipfs_api_url)
         verification = {
             "ok": None,
             "skipped": "source=ipfs-scan has no on-chain last aggregator context",
         }
 
-    sys.path.insert(0, str(REPO_ROOT / "agent"))
-    from zk_mcp_server import prove_single_image
+    if args.zk_inference_url:
+        proof = remote_prove_single_image(
+            args.zk_inference_url,
+            model_path=download["model_path"],
+            signature_path=download["signature_path"],
+            index=args.index,
+            workdir=args.workdir,
+            query_dir=args.query_dir,
+            skip_calibration=args.skip_calibration,
+        )
+    else:
+        sys.path.insert(0, str(REPO_ROOT / "agent"))
+        from zk_mcp_server import prove_single_image
 
-    proof = prove_single_image(
-        model_path=download["model_path"],
-        signature_path=download["signature_path"],
-        index=args.index,
-        workdir=args.workdir,
-        query_dir=args.query_dir,
-        skip_calibration=args.skip_calibration,
-    )
+        proof = prove_single_image(
+            model_path=download["model_path"],
+            signature_path=download["signature_path"],
+            index=args.index,
+            workdir=args.workdir,
+            query_dir=args.query_dir,
+            skip_calibration=args.skip_calibration,
+        )
     return {"bundle": bundle, "download": download, "verification": verification, "proof_run": proof}
 
 
@@ -79,8 +130,9 @@ def _local_langchain_tools():
         rpc_url = normalize_host_rpc_url(os.environ.get("RPC_URL") or env_file.get("RPC_URL", "http://127.0.0.1:8545"))
         gm_storage_address = os.environ.get("GM_STORAGE_ADDRESS") or env_file.get("GM_STORAGE_ADDRESS", "")
         registry_address = os.environ.get("REGISTRY_ADDRESS") or env_file.get("REGISTRY_ADDRESS", "")
+        ipfs_api_url = normalize_ipfs_api_url(os.environ.get("IPFS_API_URL", DEFAULT_IPFS_API_URL))
         bundle = read_current_bundle_from_contract(rpc_url, gm_storage_address, registry_address=registry_address)
-        download = fetch_onchain_bundle(bundle, DEFAULT_DOWNLOAD_DIR, ipfs_api_url=DEFAULT_IPFS_API_URL)
+        download = fetch_onchain_bundle(bundle, DEFAULT_DOWNLOAD_DIR, ipfs_api_url=ipfs_api_url)
         verification = verify_download_with_registry(bundle, download, rpc_url, registry_address)
         return json.dumps({"bundle": bundle, "download": download, "verification": verification}, indent=2)
 
@@ -88,15 +140,17 @@ def _local_langchain_tools():
     def rag_search_ipfs_models(query: str) -> str:
         """Debug fallback: search local IPFS model/signature metadata for relevant artifacts."""
 
-        entries = list_ipfs_tree(api_url=DEFAULT_IPFS_API_URL, root=DEFAULT_IPFS_ROOT)
+        ipfs_api_url = normalize_ipfs_api_url(os.environ.get("IPFS_API_URL", DEFAULT_IPFS_API_URL))
+        entries = list_ipfs_tree(api_url=ipfs_api_url, root=DEFAULT_IPFS_ROOT)
         return json.dumps(rag_search(query, entries), indent=2)
 
     @tool
     def fetch_latest_model_bundle() -> str:
         """Fetch the latest aggregated model and matching signature from local IPFS."""
 
-        bundle = discover_latest(api_url=DEFAULT_IPFS_API_URL, root=DEFAULT_IPFS_ROOT)
-        download = fetch_bundle(bundle, DEFAULT_DOWNLOAD_DIR, api_url=DEFAULT_IPFS_API_URL)
+        ipfs_api_url = normalize_ipfs_api_url(os.environ.get("IPFS_API_URL", DEFAULT_IPFS_API_URL))
+        bundle = discover_latest(api_url=ipfs_api_url, root=DEFAULT_IPFS_ROOT)
+        download = fetch_bundle(bundle, DEFAULT_DOWNLOAD_DIR, api_url=ipfs_api_url)
         return json.dumps({"bundle": bundle, "download": download}, indent=2)
 
     return [fetch_current_onchain_model_bundle, rag_search_ipfs_models, fetch_latest_model_bundle]
@@ -157,6 +211,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--download-dir", type=Path, default=DEFAULT_DOWNLOAD_DIR)
     parser.add_argument("--workdir", default=os.environ.get("ZK_WORKDIR", "zk_inference/out"))
     parser.add_argument("--query-dir", default=os.environ.get("ZK_QUERY_DIR", "zk_inference/single_query"))
+    parser.add_argument("--zk-inference-url", default=os.environ.get("ZK_INFERENCE_URL"))
     parser.add_argument("--index", type=int, default=None)
     parser.add_argument("--skip-calibration", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument(
