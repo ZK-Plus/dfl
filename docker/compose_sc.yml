@@ -15,6 +15,6 @@ services:
       INITIAL_GM_SIG_CID: ${INITIAL_GM_SIG_CID}
       INITIAL_GM_SIGNER_ADDRESS: ${INITIAL_GM_SIGNER_ADDRESS}
       #RUST_LOG: debug
-    command: ["/dfl/remote_attestation/starter_docker.sh"]
+    command: ["/dfl/smart_contracts/starter_docker.sh"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

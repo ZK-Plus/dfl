@@ -17,6 +17,8 @@ services:
       - "20"
       - --hardfork
       - ${ANVIL_HARDFORK:-osaka}
+      - --code-size-limit
+      - "999999"
     healthcheck:
       test: ["CMD-SHELL", "cast block-number --rpc-url http://localhost:8545 >/dev/null 2>&1 || exit 1"]
       interval: 2s
@@ -55,11 +57,11 @@ services:
       P256_VERIFIER_ADDRESS: ${P256_VERIFIER_ADDRESS:-}
       DEPLOY_TDX_V4_DCAP: ${DEPLOY_TDX_V4_DCAP}
       VERIFY_TDX_QUOTE_ONCHAIN: ${VERIFY_TDX_QUOTE_ONCHAIN}
-      PCCS_QUOTE_PATH: ${PCCS_QUOTE_PATH:-./apps/data/phala_tdx_quote}
+      PCCS_QUOTE_PATH: ${PCCS_QUOTE_PATH:-./data/phala_tdx_quote}
       INITIAL_GM_CID: ${INITIAL_GM_CID}
       INITIAL_GM_SIG_CID: ${INITIAL_GM_SIG_CID}
       INITIAL_GM_SIGNER_ADDRESS: ${INITIAL_GM_SIGNER_ADDRESS}
       #RUST_LOG: debug
-    command: ["/dfl/remote_attestation/starter_docker.sh"]
+    command: ["/dfl/smart_contracts/starter_docker.sh"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

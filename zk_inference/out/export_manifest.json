@@ -1,5 +1,5 @@
 {
-  "source_model": "/Users/sonak/uni/masterthesis/Master-Thesis/agent/downloads/onchain-fff8895216f4-aggregated.bin",
+  "source_model": "/Users/sonak/uni/masterthesis/Master-Thesis/agent/downloads/onchain-b210577b8942-aggregated.bin",
   "source_implementation": "neural_network/cli.py",
   "export_dir": "/Users/sonak/uni/masterthesis/Master-Thesis/zk_inference/out",
   "model": {
@@ -57,59 +57,59 @@
         200,
         784
       ],
-      "min": -0.5564705057757672,
-      "max": 0.5678443974145488,
-      "mean": 3.058786298114189e-05
+      "min": -0.5705639357759933,
+      "max": 0.5662245550789791,
+      "mean": 0.00012171778973579804
     },
     "fc1.bias": {
       "shape": [
         200
       ],
-      "min": -0.5012165672894072,
-      "max": 0.5029081985566424,
-      "mean": 0.005830964401451981
+      "min": -0.5028700908621508,
+      "max": 0.5035343285690607,
+      "mean": 0.00575608942072547
     },
     "fc2.weight": {
       "shape": [
         50,
         200
       ],
-      "min": -0.6068558769657061,
-      "max": 0.6061962223123551,
-      "mean": -0.0011190129160881198
+      "min": -0.6046671439413673,
+      "max": 0.596153812214271,
+      "mean": -0.0008553808951085335
     },
     "fc2.bias": {
       "shape": [
         50
       ],
-      "min": -0.3396349838190098,
-      "max": 0.5123820340491012,
-      "mean": 0.054838821182457934
+      "min": -0.351022778123123,
+      "max": 0.5130765949843791,
+      "mean": 0.0559108446494126
     },
     "fc3.weight": {
       "shape": [
         10,
         50
       ],
-      "min": -0.7486996894999673,
-      "max": 0.7201517556742819,
-      "mean": 0.006201994088572444
+      "min": -0.7160001157893863,
+      "max": 0.7427473693849009,
+      "mean": 0.00620199408857245
     },
     "fc3.bias": {
       "shape": [
         10
       ],
-      "min": -0.5069821832738468,
-      "max": 0.3754663969036813,
-      "mean": -0.016539599055675588
+      "min": -0.4900005616926089,
+      "max": 0.41158800238381427,
+      "mean": -0.01653959905567551
     }
   },
   "parity_check": {
     "comparison": "neural_network_float64_vs_export_float32_softmax",
     "batch_size": 4,
     "seed": 7,
-    "max_abs_diff": 4.078255466666292e-07,
-    "mean_abs_diff": 7.107950411114078e-08
+    "max_abs_diff": 4.699054210466347e-07,
+    "mean_abs_diff": 9.747440745623754e-08
   },
   "notes": [
     "The model is loaded through neural_network.read_model_bin.",

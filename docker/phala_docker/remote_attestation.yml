@@ -8,4 +8,4 @@ services:
       IPFS_PROVIDER: ${IPFS_PROVIDER}
       INITIAL_GM_CID: ${INITIAL_GM_CID}
       DOCKER: ${DOCKER}
-    command: ["/dfl/remote_attestation/starter_docker.sh"]
+    command: ["/dfl/smart_contracts/starter_docker.sh"]

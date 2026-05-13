@@ -149,6 +149,8 @@ services:
       - "20"
       - --hardfork
       - ${ANVIL_HARDFORK:-osaka}
+      - --code-size-limit
+      - "999999"
     healthcheck:
       test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8545' >/dev/null 2>&1 || exit 1"]
       interval: 2s
@@ -202,11 +204,11 @@ services:
       DEPLOY_TDX_V4_DCAP: ${DEPLOY_TDX_V4_DCAP:-1}
       VERIFY_TDX_QUOTE_ONCHAIN: ${VERIFY_TDX_QUOTE_ONCHAIN:-1}
       AGGREGATOR_TIMEOUT_REPORT_PERCENT: ${AGGREGATOR_TIMEOUT_REPORT_PERCENT:-50}
-      PCCS_QUOTE_PATH: ${PCCS_QUOTE_PATH:-./apps/data/phala_tdx_quote}
+      PCCS_QUOTE_PATH: ${PCCS_QUOTE_PATH:-./data/phala_tdx_quote}
       INITIAL_GM_CID: ${INITIAL_GM_CID}
       INITIAL_GM_SIG_CID: ${INITIAL_GM_SIG_CID}
       INITIAL_GM_SIGNER_ADDRESS: ${INITIAL_GM_SIGNER_ADDRESS}
-    command: ["/dfl/remote_attestation/starter_docker.sh"]
+    command: ["/dfl/smart_contracts/starter_docker.sh"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 

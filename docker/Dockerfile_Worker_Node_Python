@@ -43,7 +43,7 @@ COPY mnist/data/train-labels.idx1-ubyte ./node_server/data/train-labels.idx1-uby
 COPY mnist/data/t10k-images.idx3-ubyte ./node_server/data/t10k-images.idx3-ubyte
 COPY mnist/data/t10k-labels.idx1-ubyte ./node_server/data/t10k-labels.idx1-ubyte
 COPY mnist/data/random_start.bin ./node_server/data/random_start.bin
-COPY remote_attestation/apps/data/phala_tdx_quote ./node_server/attestation/
+COPY smart_contracts/data/phala_tdx_quote ./node_server/attestation/
 
 RUN chmod +x /dfl/start_node_neural_network.sh && \
     mkdir -p /dfl/node_server/data/results_iid /dfl/node_server/received_models /dfl/node_server/attestation
