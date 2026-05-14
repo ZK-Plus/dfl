@@ -7,11 +7,11 @@ import argparse
 import hashlib
 import json
 import os
+from pathlib import Path
 import re
 import sys
-import urllib.request
-from pathlib import Path
 from typing import Any
+import urllib.request
 from urllib.parse import urlsplit, urlunsplit
 
 from ipfs_rag import DEFAULT_DOWNLOAD_DIR, DEFAULT_IPFS_API_URL, cat_path
@@ -247,7 +247,11 @@ def _artifact_name(cid: str, suffix: str) -> str:
     return f"onchain-{short_hash}{suffix}"
 
 
-def fetch_onchain_bundle(bundle: dict[str, str], out_dir: Path, ipfs_api_url: str = DEFAULT_IPFS_API_URL) -> dict[str, Any]:
+def fetch_onchain_bundle(
+    bundle: dict[str, str],
+    out_dir: Path,
+    ipfs_api_url: str = DEFAULT_IPFS_API_URL,
+) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
     model_path = out_dir / _artifact_name(bundle["model_cid"], "-aggregated.bin")
     signature_path = out_dir / _artifact_name(bundle["signature_cid"], "-aggregated.bin.sig")
@@ -317,7 +321,9 @@ def verify_download_with_registry(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Read current model/signature CIDs from GMStorage and fetch them via IPFS.")
+    parser = argparse.ArgumentParser(
+        description="Read current model/signature CIDs from GMStorage and fetch them via IPFS."
+    )
     parser.add_argument("--rpc-url", default=None)
     parser.add_argument("--gm-storage-address", default=None)
     parser.add_argument("--registry-address", default=None)
@@ -325,7 +331,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ipfs-api-url", default=DEFAULT_IPFS_API_URL)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_DOWNLOAD_DIR)
     parser.add_argument("--fetch", action="store_true")
-    parser.add_argument("--verify", action="store_true", help="Verify model signature using last aggregator public key.")
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify model signature using last aggregator public key.",
+    )
     args = parser.parse_args(argv)
 
     env_file = load_env_file(args.env_file)

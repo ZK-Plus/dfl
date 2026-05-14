@@ -14,14 +14,14 @@ import dataclasses
 import datetime as dt
 import json
 import os
+from pathlib import Path
 import re
 import sys
 import time
+from typing import Iterable
 import urllib.error
 import urllib.parse
 import urllib.request
-from pathlib import Path
-from typing import Iterable
 
 
 DEFAULT_IPFS_API_URL = os.environ.get("IPFS_API_URL", "http://127.0.0.1:5001").rstrip("/")
@@ -85,8 +85,13 @@ def _entry_from_files_ls(parent: str, item: dict) -> IpfsEntry:
 
 
 def _entry_from_ls(parent: str, item: dict) -> IpfsEntry:
+    path = (
+        _join_ipfs_path(parent, item["Name"])
+        if not parent.startswith("/ipfs/")
+        else f"{parent.rstrip('/')}/{item['Name']}"
+    )
     return IpfsEntry(
-        path=_join_ipfs_path(parent, item["Name"]) if not parent.startswith("/ipfs/") else f"{parent.rstrip('/')}/{item['Name']}",
+        path=path,
         name=item["Name"],
         type="directory" if int(item.get("Type", 2)) == 1 else "file",
         size=int(item["Size"]) if "Size" in item else None,
@@ -229,8 +234,16 @@ def build_retrieval_docs(entries: Iterable[IpfsEntry]) -> list[dict]:
         kind = "model" if entry.is_model else "signature"
         stamp_match = MODEL_RE.search(entry.name.removesuffix(".sig"))
         stamp = stamp_match.group("stamp") if stamp_match else "unknown"
-        text = f"{kind} artifact {entry.name} timestamp {stamp} path {entry.path} size {entry.size or 'unknown'} cid {entry.hash or 'unknown'}"
-        docs.append({"page_content": text, "metadata": dataclasses.asdict(entry) | {"kind": kind, "timestamp": stamp}})
+        text = (
+            f"{kind} artifact {entry.name} timestamp {stamp} path {entry.path} "
+            f"size {entry.size or 'unknown'} cid {entry.hash or 'unknown'}"
+        )
+        docs.append(
+            {
+                "page_content": text,
+                "metadata": dataclasses.asdict(entry) | {"kind": kind, "timestamp": stamp},
+            }
+        )
     return docs
 
 
@@ -280,7 +293,9 @@ def discover_latest(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Discover and fetch the latest aggregated model bundle from local IPFS.")
+    parser = argparse.ArgumentParser(
+        description="Discover and fetch the latest aggregated model bundle from local IPFS."
+    )
     parser.add_argument("--api-url", default=DEFAULT_IPFS_API_URL)
     parser.add_argument("--root", default=DEFAULT_IPFS_ROOT, help="MFS path like /, or immutable path like /ipfs/<cid>")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_DOWNLOAD_DIR)

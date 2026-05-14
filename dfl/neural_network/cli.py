@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import os
 import random
-import socket
 import struct
 import sys
 import threading

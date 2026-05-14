@@ -17,6 +17,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dockerEnvPath = path.resolve(__dirname, '../../../.env');
+const hasDockerEnv = fs.existsSync(dockerEnvPath);
 
 function readEnvFile(filePath) {
     const env = {};
@@ -95,7 +96,10 @@ test('validateTimingConfig accepts a wider timing budget', () => {
     assert.deepEqual(validateTimingConfig(config), []);
 });
 
-test('docker .env timing profile has enough worker failover budget', () => {
+test(
+    'docker .env timing profile has enough worker failover budget',
+    { skip: !hasDockerEnv },
+    () => {
     const config = deriveTimingConfig(readEnvFile(dockerEnvPath));
     const warnings = validateTimingConfig(config);
 
@@ -108,7 +112,8 @@ test('docker .env timing profile has enough worker failover budget', () => {
         gmUpdateWaitBudgetMs(config) >= recommendedGMUpdateBudgetMs(config),
         'GM update wait budget should cover model submission deadline, aggregation/update estimate and one poll interval.',
     );
-});
+    },
+);
 
 test('shouldStartAggregation waits until all models arrive or the deadline expires', () => {
     assert.equal(shouldStartAggregation({

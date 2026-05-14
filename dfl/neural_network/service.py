@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 import threading
 import traceback
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from .cli import aggregate, save_random, start_client, start_server, train_model
@@ -138,4 +138,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

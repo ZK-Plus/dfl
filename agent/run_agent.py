@@ -7,11 +7,11 @@ import argparse
 import asyncio
 import json
 import os
+from pathlib import Path
 import sys
+from typing import Any
 import urllib.error
 import urllib.request
-from pathlib import Path
-from typing import Any
 
 from blockchain_source import (
     DEFAULT_ENV_FILE,
@@ -22,7 +22,15 @@ from blockchain_source import (
     read_current_bundle_from_contract,
     verify_download_with_registry,
 )
-from ipfs_rag import DEFAULT_DOWNLOAD_DIR, DEFAULT_IPFS_API_URL, DEFAULT_IPFS_ROOT, discover_latest, fetch_bundle, list_ipfs_tree, rag_search
+from ipfs_rag import (
+    DEFAULT_DOWNLOAD_DIR,
+    DEFAULT_IPFS_API_URL,
+    DEFAULT_IPFS_ROOT,
+    discover_latest,
+    fetch_bundle,
+    list_ipfs_tree,
+    rag_search,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -184,7 +192,8 @@ async def langchain_agent(args: argparse.Namespace) -> dict[str, Any]:
     prompt = (
         "You are the local thesis ZK inference agent. "
         "Use the GMStorage smart contract as the source of truth for the current model CID and signature CID. "
-        "Read the last aggregator from GMStorage, get its public key from DeviceRegistry, and verify the downloaded model signature. "
+        "Read the last aggregator from GMStorage, get its public key from DeviceRegistry, "
+        "and verify the downloaded model signature. "
         "Only if verification succeeds, use the MCP zk_inference tools to create a single-image prediction and proof. "
         "Only use local IPFS metadata search as a debug fallback if the contract source fails. "
         f"Use MNIST index {args.index} if it is not null, otherwise let the tool select a correctly classified image. "
@@ -225,7 +234,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=int(os.environ.get("AGENT_PAIR_WINDOW_SECONDS", "120")),
         help="Maximum timestamp distance for pairing a model with a separately written signature.",
     )
-    parser.add_argument("--llm", action="store_true", help="Use LangChain LLM agent mode instead of deterministic orchestration.")
+    parser.add_argument(
+        "--llm",
+        action="store_true",
+        help="Use LangChain LLM agent mode instead of deterministic orchestration.",
+    )
     return parser
 
 
