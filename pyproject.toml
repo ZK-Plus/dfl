@@ -10,9 +10,16 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"agent/blockchain_source.py" = ["I001"]
+"agent/ipfs_rag.py" = ["I001"]
+"agent/run_agent.py" = ["I001"]
+"agent/zk_mcp_server.py" = ["I001"]
 "dfl/neural_network/start_service.py" = ["E402", "I001"]
+"dfl/neural_network/service.py" = ["I001"]
 "zk_inference/create_single_mnist_query.py" = ["E402", "I001"]
 "zk_inference/prepare_mnist_input.py" = ["E402", "I001"]
+"zk_inference/server.py" = ["I001"]
+"zk_inference/service_tools.py" = ["I001"]
 
 [tool.ruff.format]
 quote-style = "double"
