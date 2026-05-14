@@ -1,5 +1,5 @@
 {
-  "source_model": "agent/downloads/onchain-cf84bdba1ea0-aggregated.bin",
+  "source_model": "agent/downloads/onchain-596b9b5117d1-aggregated.bin",
   "source_implementation": "dfl/neural_network/cli.py",
   "export_dir": "zk_inference/out",
   "model": {
@@ -57,59 +57,59 @@
         200,
         784
       ],
-      "min": -0.5564071522911793,
-      "max": 0.563259492680698,
-      "mean": 0.0006893972277302024
+      "min": -0.5781029901774216,
+      "max": 0.5664789520363169,
+      "mean": -0.000181437513142066
     },
     "fc1.bias": {
       "shape": [
         200
       ],
-      "min": -0.5019393568496824,
-      "max": 0.5051426641630397,
-      "mean": 0.004984882446851606
+      "min": -0.5015504699082101,
+      "max": 0.5054938450880737,
+      "mean": 0.006200951616723177
     },
     "fc2.weight": {
       "shape": [
         50,
         200
       ],
-      "min": -0.5959758571967286,
-      "max": 0.5950269875331998,
-      "mean": -0.0009989764721018142
+      "min": -0.6340704049822945,
+      "max": 0.585330234409315,
+      "mean": -0.0008682721136082286
     },
     "fc2.bias": {
       "shape": [
         50
       ],
-      "min": -0.34048123100947,
-      "max": 0.5133054591031072,
-      "mean": 0.058335085249750514
+      "min": -0.3411878785218595,
+      "max": 0.5178164859775085,
+      "mean": 0.056215493821750916
     },
     "fc3.weight": {
       "shape": [
         10,
         50
       ],
-      "min": -0.7315255149504147,
-      "max": 0.7293393606587382,
-      "mean": 0.006201994088572454
+      "min": -0.7182383322872933,
+      "max": 0.7755056078166718,
+      "mean": 0.006201994088572451
     },
     "fc3.bias": {
       "shape": [
         10
       ],
-      "min": -0.5047145824713153,
-      "max": 0.4350851527681884,
-      "mean": -0.016539599055675626
+      "min": -0.4919496329695281,
+      "max": 0.41734894958697066,
+      "mean": -0.016539599055675574
     }
   },
   "parity_check": {
     "comparison": "neural_network_float64_vs_export_float32_softmax",
     "batch_size": 4,
     "seed": 7,
-    "max_abs_diff": 3.3585768621779977e-07,
-    "mean_abs_diff": 4.168390287998241e-08
+    "max_abs_diff": 6.739717612058715e-07,
+    "mean_abs_diff": 8.543501534980229e-08
   },
   "notes": [
     "The model is loaded through neural_network.read_model_bin.",
