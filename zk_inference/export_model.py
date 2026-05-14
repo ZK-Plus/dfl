@@ -43,9 +43,7 @@ except ImportError as exc:  # pragma: no cover - handled at runtime
     ) from exc
 
 
-DEFAULT_MODEL_CANDIDATES = (
-    REPO_ROOT / "dfl" / "node_server" / "data" / "results_iid" / "aggregated.bin",
-)
+DEFAULT_MODEL_CANDIDATES = (REPO_ROOT / "dfl" / "node_server" / "data" / "results_iid" / "aggregated.bin",)
 
 
 def metadata_path(path: Path) -> str:
@@ -170,10 +168,7 @@ def write_manifest(
             "class": "FederatedMLP",
             "input_size": INPUT_SIZE,
             "batch_size_training": BATCH_SIZE,
-            "layout": [
-                {"name": name, "rows": rows, "cols": cols}
-                for name, rows, cols in MODEL_LAYOUT
-            ],
+            "layout": [{"name": name, "rows": rows, "cols": cols} for name, rows, cols in MODEL_LAYOUT],
             "hidden_activations": "tanh",
             "native_output": "logits",
         },
@@ -187,10 +182,7 @@ def write_manifest(
             "static_batch_size": export_batch_size if export_onnx else None,
             "opset_version": 18 if export_onnx else None,
         },
-        "parameter_summaries": {
-            name: tensor_summary(value)
-            for name, value in model.state_dict().items()
-        },
+        "parameter_summaries": {name: tensor_summary(value) for name, value in model.state_dict().items()},
         "parity_check": parity,
         "notes": [
             "The model is loaded through neural_network.read_model_bin.",

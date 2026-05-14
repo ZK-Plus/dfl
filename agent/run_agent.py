@@ -171,8 +171,7 @@ async def langchain_agent(args: argparse.Namespace) -> dict[str, Any]:
         from langgraph.prebuilt import create_react_agent
     except ImportError as exc:
         raise RuntimeError(
-            "LangChain mode needs agent/requirements.txt. Install it with: "
-            "pip install -r agent/requirements.txt"
+            "LangChain mode needs agent/requirements.txt. Install it with: pip install -r agent/requirements.txt"
         ) from exc
 
     client = MultiServerMCPClient(
