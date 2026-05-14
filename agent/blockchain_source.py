@@ -7,11 +7,11 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import sys
-from typing import Any
 import urllib.request
+from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from ipfs_rag import DEFAULT_DOWNLOAD_DIR, DEFAULT_IPFS_API_URL, cat_path

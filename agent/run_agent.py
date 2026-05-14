@@ -7,11 +7,11 @@ import argparse
 import asyncio
 import json
 import os
-from pathlib import Path
 import sys
-from typing import Any
 import urllib.error
 import urllib.request
+from pathlib import Path
+from typing import Any
 
 from blockchain_source import (
     DEFAULT_ENV_FILE,

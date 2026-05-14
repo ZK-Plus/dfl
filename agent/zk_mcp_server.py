@@ -5,17 +5,17 @@ from __future__ import annotations
 
 from typing import Any
 
-try:
-    from mcp.server.fastmcp import FastMCP
-except ImportError:  # pragma: no cover - used by deterministic local mode
-    FastMCP = None
-
 from zk_inference.service_tools import (
     create_single_image_query as create_single_image_query_impl,
     export_model as export_model_impl,
     prove_single_image as prove_single_image_impl,
     run_ezkl as run_ezkl_impl,
 )
+
+try:
+    from mcp.server.fastmcp import FastMCP
+except ImportError:  # pragma: no cover - used by deterministic local mode
+    FastMCP = None
 
 
 class _NoMCP:
