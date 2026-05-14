@@ -9,7 +9,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
-from service_tools import prove_single_image
+from zk_inference.service_tools import prove_single_image
 
 
 HOST = os.environ.get("ZK_INFERENCE_HOST", "0.0.0.0")

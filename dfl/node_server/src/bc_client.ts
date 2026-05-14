@@ -33,29 +33,23 @@ const getGMStorageContract = () => {
 
 
 // send contract call to blockchain
-export const getCurrentGM = async () => {
+export const getCurrentGM = async (): Promise<string> => {
     const contract = getGMStorageContract();
     // call method of contract
-    let ipfs_address = await contract.methods.getGlobalModel().call().then((result) => {
-        return result;
-    });
-    return ipfs_address;
-  }
-
-export const getCurrentGMSignature = async () => {
-    const contract = getGMStorageContract();
-    const sig = await contract.methods.getGlobalModelSignature().call().then((result) => {
-        return result;
-    });
-    return sig;
+    const ipfsAddress = await contract.methods.getGlobalModel().call();
+    return String(ipfsAddress);
 }
 
-export const getLastRoundsAggregator = async () => {
+export const getCurrentGMSignature = async (): Promise<string> => {
     const contract = getGMStorageContract();
-    const agg = await contract.methods.getLastRoundsAggregator().call().then((result) => {
-        return result;
-    });
-    return agg;
+    const sig = await contract.methods.getGlobalModelSignature().call();
+    return String(sig);
+}
+
+export const getLastRoundsAggregator = async (): Promise<string> => {
+    const contract = getGMStorageContract();
+    const agg = await contract.methods.getLastRoundsAggregator().call();
+    return String(agg);
 }
 
 // Backwards-compatible alias used by server.js
