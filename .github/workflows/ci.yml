@@ -131,7 +131,7 @@ jobs:
         run: forge build
 
   docker-builds:
-    name: Docker Builds
+    name: Docker Build (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -166,3 +166,64 @@ jobs:
           tags: ${{ matrix.image }}:latest
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,scope=${{ matrix.name }},mode=max
+
+  runtime-smoke-test:
+    name: Runtime Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Start core runtime services
+        run: docker compose -f compose.yml up -d --build anvil ipfs zk-inference
+
+      - name: Wait for Anvil JSON-RPC
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS \
+              -H 'Content-Type: application/json' \
+              --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
+              http://127.0.0.1:8545 >/tmp/anvil-health.json; then
+              cat /tmp/anvil-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Anvil did not become ready in time."
+          exit 1
+
+      - name: Wait for IPFS API
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS -X POST http://127.0.0.1:5001/api/v0/version >/tmp/ipfs-version.json; then
+              cat /tmp/ipfs-version.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "IPFS API did not become ready in time."
+          exit 1
+
+      - name: Wait for zk-inference health endpoint
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8090/health >/tmp/zk-health.json; then
+              cat /tmp/zk-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "zk-inference HTTP service did not become ready in time."
+          exit 1
+
+      - name: Show compose status
+        if: always()
+        run: docker compose -f compose.yml ps
+
+      - name: Show compose logs on failure
+        if: failure()
+        run: docker compose -f compose.yml logs --no-color anvil ipfs zk-inference
+
+      - name: Tear down runtime services
+        if: always()
+        run: docker compose -f compose.yml down --volumes --remove-orphans

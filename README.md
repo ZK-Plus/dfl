@@ -1,5 +1,7 @@
 # Master Thesis Prototype: Trusted DFL and Verifiable Inference
 
+[![CI](https://github.com/uZhW8Rgl/Master-Thesis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/uZhW8Rgl/Master-Thesis/actions/workflows/ci.yml)
+
 This repository contains a proof-of-concept implementation for trusted decentralized federated learning (DFL), model provenance, and verifiable single-image inference.
 
 The current prototype combines:
@@ -23,6 +25,34 @@ The current prototype combines:
 - [zk_inference](./zk_inference/README.md): ONNX export, single-image query creation, EZKL proof generation, and proof verification.
 - [agent](./agent/README.md): Local LangChain/MCP agent for contract-based model retrieval, signature verification, and ZK inference.
 
+## Reproducible Demo
+
+For a clean local demo, start from a fresh stack and use Docker Compose as the single entry point:
+
+```bash
+docker compose down --volumes --remove-orphans
+KEEP_ALIVE=0 docker compose up --build --force-recreate
+```
+
+This is the recommended "one-command demo run" for the thesis prototype. It rebuilds the active services, launches the local infrastructure, deploys the contracts, runs the DFL flow, stores the new global model in IPFS, and updates the on-chain metadata.
+
+## Demo Outcome
+
+When the run completes successfully, you should have:
+
+- a local Anvil chain with deployed DFL and attestation contracts,
+- a local IPFS node with the global model and signature pinned,
+- completed worker runs for training and aggregation,
+- observability data in Grafana, Prometheus, Loki, and Tempo,
+- and a ready-to-run verifiable inference path through `agent/run_agent.py`.
+
+The most important generated outputs are:
+
+- `agent/downloads/`: model and signature bundles fetched by the agent
+- `zk_inference/out/`: ONNX, EZKL settings, witness, proof, and verification key
+- `zk_inference/single_query/`: single-image MNIST input and prediction metadata
+- `smart_contracts/broadcast/`: deployment metadata and latest contract addresses
+
 ## Recommended Local Run
 
 The Docker setup is the primary way to run the DFL prototype:
@@ -45,6 +75,43 @@ The local stack starts:
 - Grafana, Prometheus, Loki, Tempo, Promtail, and OpenTelemetry Collector.
 
 The root `.env` file provides the local timing, account, contract, and IPFS configuration. The local Docker flow also uses RSA keys from `data/rsa_keys`, MNIST data from `data/mnist`, and the TDX quote from `data/phala_tdx_quote`.
+
+## Quick Verification
+
+After `docker compose up`, these quick checks confirm that the core demo finished in a meaningful state:
+
+1. Check that the main containers are healthy or completed:
+
+```bash
+docker compose ps
+```
+
+2. Query the current global model CID from `GMStorage`:
+
+```bash
+cast call 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 \
+  "getGlobalModel()(string)" \
+  --rpc-url http://127.0.0.1:8545
+```
+
+3. Run the local verifiable inference agent:
+
+```bash
+.venv/bin/python agent/run_agent.py \
+  --source contract \
+  --rpc-url http://127.0.0.1:8545 \
+  --gm-storage-address 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 \
+  --registry-address 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
+  --ipfs-api-url http://127.0.0.1:5001 \
+  --skip-calibration
+```
+
+4. Inspect the resulting proof artifacts:
+
+```bash
+ls -lah zk_inference/out
+ls -lah zk_inference/single_query
+```
 
 ## Stack Flow
 
@@ -133,6 +200,19 @@ Some runs create local build and proof outputs:
 - `zk_inference/out/`: ONNX, EZKL settings, witness, proof, and verification key.
 - `zk_inference/single_query/`: single-image MNIST input and prediction metadata.
 - `agent/downloads/`: model and signature bundles fetched by the agent.
+
+## GitHub Workflow
+
+The repository now includes a GitHub Actions CI pipeline for:
+
+- repository hygiene and Docker Compose validation,
+- Python linting and formatting checks with Ruff,
+- Node.js build and tests,
+- Foundry contract builds,
+- Docker image builds,
+- and a runtime smoke test for the core containerized stack.
+
+Recommended repository settings for `main` are documented in [`.github/BRANCH_PROTECTION.md`](./.github/BRANCH_PROTECTION.md).
 
 ## Notes
 
